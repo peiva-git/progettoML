@@ -1,0 +1,45 @@
+---
+title: "Progetto"
+author: "Manuel kosovel"
+date: "8/12/2020"
+output: html_document
+---
+
+First we import the csv
+```{r}
+data = read.csv("C:\\Users\\aleks\\Documents\\drive\\uni\\Progetti\\ML\\progetti 2019_20\\leaf\\leaf.csv")
+```
+
+Change the names of the coloumns
+```{r}
+colnames(data) <- c("Class","Specimen Number","Eccentricity","Aspect Ratio","Elongation",
+                    "Solidity","Stochastic Convexity","Isoperimetric Factor",
+                    "Maximal Indentation Depth","Lobedness","Average Intensity" , 
+                    "Average Contrast","Smoothness","Third moment","Uniformity","Entropy")
+```
+
+Summary of the data
+
+```{r}
+summary(data)
+```
+
+Import random forest
+```{r}
+require(randomForest)
+```
+
+Learn random forest``
+
+```{r}
+m = randomForest(Class~.,data)
+m
+```
+
+Error
+```{r}
+m$confusion
+```
+
+
+
