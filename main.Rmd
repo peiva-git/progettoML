@@ -5,6 +5,25 @@ date: "8/12/2020"
 output: html_document
 ---
 
+Useful imported functions
+```{r}
+# return vector of errors for each fold
+# can specify formula, learning technique, data and number of folds (k)
+cv.error = function(formula, learner, data, k, ...) {
+  indexes = sample(nrow(data))
+  errs = c(1:k) %>% map_dbl(function(i) {
+    indexes.test = indexes[c((nrow(data)/k*(i-1)+1):(nrow(data)/k*i))] # 1 -> n/k, (n/k) + 1 -> 2*(n/k), ...
+    m = learner(formula, data[-indexes.test,], ...)
+    predicted.y = predict(m, data[indexes.test,], type = "class")
+    actual.y = data[indexes.test, as.character(f_lhs(formula))]
+    confusion.matrix = table(actual.y, predicted.y)
+    1-sum(diag(confusion.matrix))/sum(confusion.matrix)
+  })
+  names(errs) = paste0("fold", c(1:k))
+  errs
+}
+```
+
 First we import the csv
 ```{r}
 data = read.csv("/home/peiva/Documents/Sync documents/units/introduction to machine learning and evolutionary robotics/progetti_2019_20/leaf identification/leaf.csv")
@@ -65,6 +84,17 @@ Considering variable importance
 ```{r}
 modelRF$importance
 modelTB$importance
+```
+
+Error rate with 5-CV
+```{r}
+cv.error(Class ~ . - SpecimenNumber, randomForest, data, 5)
+```
+Error rates with different k-CV ("long" computation time)
+```{r}
+k_value = seq(2, 10, 1)
+error = k_value %>% map_dbl(function(r) {mean(cv.error(Class~.-SpecimenNumber, randomForest, data, r))})
+tibble(k_value = k_value, error = error) %>% ggplot(aes(x=k_value, y=error)) + geom_line()
 ```
 
 TODO: estimate learning techniques with CV (auto parameter or with predefined parameter)
