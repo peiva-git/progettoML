@@ -1,27 +1,30 @@
 ---
-title: "Progetto"
-author: "Manuel kosovel"
+title: "Progetto ML"
+author: "Manuel Kosovel, Ivan Pelizon"
 date: "8/12/2020"
 output: html_document
 ---
 
 First we import the csv
 ```{r}
-data = read.csv("C:\\Users\\aleks\\Documents\\drive\\uni\\Progetti\\ML\\progetti 2019_20\\leaf\\leaf.csv")
+data = read.csv("/home/peiva/Documents/Sync documents/units/introduction to machine learning and evolutionary robotics/progetti_2019_20/leaf identification/leaf.csv")
 ```
 
-Change the names of the coloumns
+Change column names
 ```{r}
-colnames(data) <- c("Class","Specimen Number","Eccentricity","Aspect Ratio","Elongation",
-                    "Solidity","Stochastic Convexity","Isoperimetric Factor",
-                    "Maximal Indentation Depth","Lobedness","Average Intensity" , 
-                    "Average Contrast","Smoothness","Third moment","Uniformity","Entropy")
+colnames(data) <- c("Class","SpecimenNumber","Eccentricity","AspectRatio","Elongation",
+                    "Solidity","StochasticConvexity","IsoperimetricFactor",
+                    "MaximalIndentationDepth","Lobedness","AverageIntensity" , 
+                    "AverageContrast","Smoothness","ThirdMoment","Uniformity","Entropy")
 ```
 
 Summary of the data
-
 ```{r}
 summary(data)
+```
+```{r}
+data$Class = as.factor(data$Class) # otherwise randomForest assumes regression
+# mapvalues(data$Class, from = c(...), to = c(...)) to rename factor column names
 ```
 
 Import random forest
@@ -29,17 +32,33 @@ Import random forest
 require(randomForest)
 ```
 
-Learn random forest``
-
+Learn tree - based models
 ```{r}
-m = randomForest(Class~.,data)
-m
+modelRF = randomForest(Class ~ . - SpecimenNumber, data) # specimen number not relevant for classification
+modelTB = randomForest(Class ~ . - SpecimenNumber, data, mtry = ncol(data) - 2) # same as random forest, but considering all variables
 ```
 
-Error
+Random forest errors
 ```{r}
-m$confusion
+modelRF$confusion
+head(modelRF$err.rate)
+```
+Tree bagging errors
+```{r}
+modelTB$confusion
+head(modelTB$err.rate)
 ```
 
+Random forest confusion matrix and OOB, from lab3.Rmd
+```{r}
+confusion.matrix.RF = modelRF$confusion[,-ncol(modelRF$confusion)]
+1-sum(diag(confusion.matrix.RF))/sum(confusion.matrix.RF)
+```
 
-
+Tree bagging confusion matrix and OOB
+```{r}
+confusion.matrix.TB = modelTB$confusion[,-ncol(modelTB$confusion)]
+1-sum(diag(confusion.matrix.TB))/sum(confusion.matrix.TB)
+```
+TODO: estimate learning techniques with CV (auto parameter or with predefined parameter)
+      add SVM and single tree learning techniques (and also boosting variant?)
