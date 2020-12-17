@@ -35,7 +35,7 @@ require(randomForest)
 Learn tree - based models
 ```{r}
 modelRF = randomForest(Class ~ . - SpecimenNumber, data) # specimen number not relevant for classification
-modelTB = randomForest(Class ~ . - SpecimenNumber, data, mtry = ncol(data) - 2) # same as random forest, but considering all variables
+modelTB = randomForest(Class ~ . - SpecimenNumber, data, mtry = ncol(data) - 2) # tree bagging, same as random forest, but considering all variables - (SpecimenName + Class)
 ```
 
 Random forest errors
@@ -60,5 +60,12 @@ Tree bagging confusion matrix and OOB
 confusion.matrix.TB = modelTB$confusion[,-ncol(modelTB$confusion)]
 1-sum(diag(confusion.matrix.TB))/sum(confusion.matrix.TB)
 ```
+
+Considering variable importance
+```{r}
+modelRF$importance
+modelTB$importance
+```
+
 TODO: estimate learning techniques with CV (auto parameter or with predefined parameter)
       add SVM and single tree learning techniques (and also boosting variant?)
