@@ -5,6 +5,14 @@ date: "8/12/2020"
 output: html_document
 ---
 
+Packages needed
+
+```{r}
+require(tidyverse)
+require(rlang)
+```
+
+
 Useful imported functions
 ```{r}
 # return vector of errors for each fold
@@ -26,7 +34,7 @@ cv.error = function(formula, learner, data, k, ...) {
 
 First we import the csv
 ```{r}
-data = read.csv("/home/peiva/Documents/Sync documents/units/introduction to machine learning and evolutionary robotics/progetti_2019_20/leaf identification/leaf.csv")
+data = read.csv("/home/koso/Documenti/leaf.csv")
 ```
 
 Change column names
@@ -99,3 +107,48 @@ tibble(k_value = k_value, error = error) %>% ggplot(aes(x=k_value, y=error)) + g
 
 TODO: estimate learning techniques with CV (auto parameter or with predefined parameter)
       add SVM and single tree learning techniques (and also boosting variant?)
+      
+      
+SINGLE TREE
+
+```{r}
+require(tree)
+```
+
+build tree
+```{r}
+singleTree = tree(Class ~ . - SpecimenNumber, data)
+```
+```{r}
+plot(singleTree)
+text(singleTree)
+```
+
+```{r}
+cv.error(Class ~ . - SpecimenNumber, tree , data, 5)
+```
+
+
+      
+SVM 
+
+```{r}
+require(e1071)
+```
+
+build svm model
+Default kernel: radial
+```{r}
+modelSVM = svm(Class ~ . - SpecimenNumber, data)
+```
+
+
+We can use the cv.error function (k = 10)
+
+```{r}
+cv.error(formula = Class ~ . - SpecimenNumber, svm, data, 10, kernel="polynomial", degree=2)
+```
+
+
+      
+      
