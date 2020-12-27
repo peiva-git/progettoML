@@ -34,7 +34,7 @@ cv.error = function(formula, learner, data, k, ...) {
 
 First we import the csv
 ```{r}
-data = read.csv("/home/koso/Documenti/leaf.csv")
+data = read.csv("C:\\Users\\aleks\\Documents\\drive\\uni\\Progetti\\ML\\progetti 2019_20\\leaf\\leaf.csv")
 ```
 
 Change column names
@@ -128,6 +128,12 @@ text(singleTree)
 cv.error(Class ~ . - SpecimenNumber, tree , data, 5)
 ```
 
+```{r}
+k_value = seq(2, 10, 1)
+error = k_value %>% map_dbl(function(r) {mean(cv.error(Class ~ . - SpecimenNumber, tree , data, 5))})
+tibble(k_value = k_value, error = error) %>% ggplot(aes(x=k_value, y=error)) + geom_line()
+```
+
 
       
 SVM 
@@ -143,12 +149,18 @@ modelSVM = svm(Class ~ . - SpecimenNumber, data)
 ```
 
 
-We can use the cv.error function (k = 10)
+We can use the cv.error function 
 
 ```{r}
-cv.error(formula = Class ~ . - SpecimenNumber, svm, data, 10, kernel="polynomial", degree=2)
+cv.error(formula = Class ~ . - SpecimenNumber, svm, data, 5, kernel="polynomial", degree=2)
 ```
 
+
+```{r}
+k_value = seq(2, 10, 1)
+error = k_value %>% map_dbl(function(r) {mean(cv.error(formula = Class ~ . - SpecimenNumber, svm, data, 5, kernel="polynomial", degree=2))})
+tibble(k_value = k_value, error = error) %>% ggplot(aes(x=k_value, y=error)) + geom_line()
+```
 
       
       
