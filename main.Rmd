@@ -45,6 +45,16 @@ colnames(data) <- c("Class","SpecimenNumber","Eccentricity","AspectRatio","Elong
                     "AverageContrast","Smoothness","ThirdMoment","Uniformity","Entropy")
 ```
 
+Histogram (to modify)
+```{r}
+we <- data$Class
+we <- gsub(",", "", we)   # remove comma
+we <- as.numeric(we)      # turn into numbers
+hist(we)
+```
+
+
+
 Summary of the data
 ```{r}
 summary(data)
@@ -161,6 +171,9 @@ k_value = seq(2, 10, 1)
 error = k_value %>% map_dbl(function(r) {mean(cv.error(formula = Class ~ . - SpecimenNumber, svm, data, 5, kernel="polynomial", degree=2))})
 tibble(k_value = k_value, error = error) %>% ggplot(aes(x=k_value, y=error)) + geom_line()
 ```
+
+
+
 
       
       
