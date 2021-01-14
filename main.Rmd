@@ -32,6 +32,11 @@ cv.error = function(formula, learner, data, k, ...) {
 }
 ```
 
+User defined functions
+```{r}
+
+```
+
 First we import the csv
 ```{r}
 #data = read.csv("C:\\Users\\aleks\\Documents\\drive\\uni\\Progetti\\ML\\progetti 2019_20\\leaf\\leaf.csv")
@@ -48,20 +53,24 @@ colnames(data) <- c("Class","SpecimenNumber","Eccentricity","AspectRatio","Elong
 data = data[,-2]
 ```
 
+
 Histogram (to modify)
 ```{r}
+
 we <- data$Class
 we <- gsub(",", "", we)   # remove comma
 we <- as.numeric(we)      # turn into numbers
 hist(we)
-```
 
+```
 
 
 Summary of the data
 ```{r}
 summary(data)
 ```
+
+Treat Class column as categories
 ```{r}
 data$Class = as.factor(data$Class) # otherwise randomForest assumes regression
 # mapvalues(data$Class, from = c(...), to = c(...)) to rename factor column names
@@ -111,11 +120,26 @@ Error rate with 5-CV
 ```{r}
 cv.error(Class ~ ., randomForest, data, nrow(data))
 ```
-Error rates with different k-CV ("long" computation time)
+
+Error rates with different k-CV ("long" computation time) - NOT USEFUL
 ```{r}
 k_value = seq(2, 10, 1)
 error = k_value %>% map_dbl(function(r) {mean(cv.error(Class~.-SpecimenNumber, randomForest, data, r))})
 tibble(k_value = k_value, error = error) %>% ggplot(aes(x=k_value, y=error)) + geom_line()
+```
+
+From lab3
+```{r}
+cv.error.b = c(1:100) %>% map_dfr(function(b) {c(B = b, cv.test.err = mean(cv.error(Class ~ ., randomForest, data, 10, ntree=b)))}) %>% ggplot(aes(x=B, y=cv.test.err)) + geom_line() + ylim(0, 1)
+```
+
+Adapted from lab3, using oob instead of CV
+```{r}
+oob.error.b = c(1:100) %>% map_dfr(function(b) {
+  model = randomForest(Class ~ ., data, ntree = b)
+  confusion.matrix = model$confusion[,-ncol(model$confusion)]
+  oob.error = 1-sum(diag(confusion.matrix))/sum(confusion.matrix)
+  c(B = b, oob.test.error = oob.error)}) %>% ggplot(aes(x = B, y = oob.test.error)) + geom_line() + ylim(0, 1)
 ```
 
 TODO: estimate learning techniques with CV (auto parameter or with predefined parameter)
@@ -130,7 +154,7 @@ require(tree)
 
 build tree
 ```{r}
-singleTree = tree(Class ~ ., data)
+modelST = tree(Class ~ ., data)
 ```
 ```{r}
 plot(singleTree)
@@ -138,10 +162,14 @@ text(singleTree)
 ```
 
 ```{r}
-cv_tree = cv.error(Class ~ ., tree , data, nrow(data))
+cv.modelST = cv.error(Class ~ ., tree , data, nrow(data))
 mean(cv_tree)
 ```
 
+10-CV errors for multiple single tree parameters
+```{r}
+cv.error.kmin.ST = c(1:50) %>% map_dfr(function(k_min) {c(k = k_min, cv.test.err = mean(cv.error(Class ~ ., tree, data, nrow(data), mindev = 0, minsize = k_min)))}) %>% ggplot(aes(x=k, y=cv.test.err)) + geom_line() + ylim(0, 1)
+```
 
 
 ```{r}
