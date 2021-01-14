@@ -34,7 +34,8 @@ cv.error = function(formula, learner, data, k, ...) {
 
 First we import the csv
 ```{r}
-data = read.csv("C:\\Users\\aleks\\Documents\\drive\\uni\\Progetti\\ML\\progetti 2019_20\\leaf\\leaf.csv")
+#data = read.csv("C:\\Users\\aleks\\Documents\\drive\\uni\\Progetti\\ML\\progetti 2019_20\\leaf\\leaf.csv")
+data = read.csv("/home/peiva/Documents/Sync documents/units/introduction to machine learning and evolutionary robotics/progetti_2019_20/leaf identification/leaf.csv")
 ```
 
 Change column names
@@ -43,6 +44,8 @@ colnames(data) <- c("Class","SpecimenNumber","Eccentricity","AspectRatio","Elong
                     "Solidity","StochasticConvexity","IsoperimetricFactor",
                     "MaximalIndentationDepth","Lobedness","AverageIntensity" , 
                     "AverageContrast","Smoothness","ThirdMoment","Uniformity","Entropy")
+# remove specimen count column
+data = data[,-2]
 ```
 
 Histogram (to modify)
@@ -71,8 +74,8 @@ require(randomForest)
 
 Learn tree - based models
 ```{r}
-modelRF = randomForest(Class ~ . - SpecimenNumber, data) # specimen number not relevant for classification
-modelTB = randomForest(Class ~ . - SpecimenNumber, data, mtry = ncol(data) - 2) # tree bagging, same as random forest, but considering all variables - (SpecimenName + Class)
+modelRF = randomForest(Class ~ ., data, importance = T) # specimen number not relevant for classification
+modelTB = randomForest(Class ~ ., data, mtry = ncol(data) - 1, importance = T) # tree bagging, same as random forest, but m = considering all variables - Class
 ```
 
 Random forest errors
@@ -106,7 +109,7 @@ modelTB$importance
 
 Error rate with 5-CV
 ```{r}
-cv.error(Class ~ . - SpecimenNumber, randomForest, data, 5)
+cv.error(Class ~ ., randomForest, data, nrow(data))
 ```
 Error rates with different k-CV ("long" computation time)
 ```{r}
@@ -127,7 +130,7 @@ require(tree)
 
 build tree
 ```{r}
-singleTree = tree(Class ~ . - SpecimenNumber, data)
+singleTree = tree(Class ~ ., data)
 ```
 ```{r}
 plot(singleTree)
@@ -135,13 +138,16 @@ text(singleTree)
 ```
 
 ```{r}
-cv.error(Class ~ . - SpecimenNumber, tree , data, 5)
+cv_tree = cv.error(Class ~ ., tree , data, nrow(data))
+mean(cv_tree)
 ```
 
+
+
 ```{r}
-k_value = seq(2, 10, 1)
-error = k_value %>% map_dbl(function(r) {mean(cv.error(Class ~ . - SpecimenNumber, tree , data, 5))})
-tibble(k_value = k_value, error = error) %>% ggplot(aes(x=k_value, y=error)) + geom_line()
+k_value = seq(2, 300 , 10)
+error = k_value %>% map_dbl(function(r) {mean(cv.error(Class ~ ., tree , data, 5))})
+tibble(k_value = k_value, error = error) %>% ggplot(aes(x=k_value, y=error)) + geom_line() + ylim(0,1)
 ```
 
 
