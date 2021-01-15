@@ -34,14 +34,14 @@ cv.error = function(formula, learner, data, k, ...) {
 
 User defined functions
 ```{r}
-
+data["SpecimenNumber"]
 ```
 
 First we import the csv
 ```{r}
-#data = read.csv("C:\\Users\\aleks\\Documents\\drive\\uni\\Progetti\\ML\\progetti 2019_20\\leaf\\leaf.csv")
+data = read.csv("C:\\Users\\aleks\\Documents\\drive\\uni\\Progetti\\ML\\progetti 2019_20\\leaf\\leaf.csv")
 #data = read.csv("/home/peiva/Documents/Sync documents/units/introduction to machine learning and evolutionary robotics/progetti_2019_20/leaf identification/leaf.csv")
-data = read.csv("/home/peiva/Documents/Sync documents/Ivan/units/introduction to machine learning and evolutionary robotics/progetti_2019_20/leaf identification/leaf.csv")
+#data = read.csv("/home/peiva/Documents/Sync documents/Ivan/units/introduction to machine learning and evolutionary robotics/progetti_2019_20/leaf identification/leaf.csv")
 ```
 
 Change column names
@@ -118,6 +118,7 @@ modelTB$importance
 From lab3, error varying B with 10-CV
 ```{r}
 cv.error.RF.B = c(1:100) %>% map_dfr(function(b) {c(B = b, cv.test.err = mean(cv.error(Class ~ ., randomForest, data, 10, ntree=b)))}) %>% ggplot(aes(x=B, y=cv.test.err)) + geom_line() + ylim(0, 1)
+cv.error.RF.B
 ```
 
 Adapted from lab3, error varying B using OOB instead of CV
@@ -127,14 +128,13 @@ oob.error.RF.B = c(1:100) %>% map_dfr(function(b) {
   confusion.matrix = model$confusion[,-ncol(model$confusion)]
   oob.error = 1-sum(diag(confusion.matrix))/sum(confusion.matrix)
   c(B = b, oob.test.error = oob.error)}) %>% ggplot(aes(x = B, y = oob.test.error)) + geom_line() + ylim(0, 1)
+oob.error.RF.B
 ```
-
-TODO: estimate learning techniques with CV (auto parameter or with predefined parameter)
-      add SVM and single tree learning techniques (and also boosting variant?)
 
 LOOCV errors for multiple k_min parameters
 ```{r}
 cv.error.ST.kmin = c(1:50) %>% map_dfr(function(k_min) {c(k = k_min, cv.test.err = mean(cv.error(Class ~ ., tree, data, nrow(data), mindev = 0, minsize = k_min)))}) %>% ggplot(aes(x=k, y=cv.test.err)) + geom_line() + ylim(0, 1)
+cv.error.ST.kmin
 ```
    
 Learn SVM model
@@ -150,18 +150,69 @@ modelSVM = svm(Class ~ ., data)
 
 CV errors for multiple parameters (from lab4)
 ```{r}
-results = expand_grid(kernel=c("linear","polynomial","radial","sigmoid"), cost=exp(seq(-6,8,1))) %>% rowwise() %>% mutate(error = mean(cv.error(isVersicolor~., svm, d, 10, kernel=kernel, cost=cost, degree=2)))
-results %>% ggplot(aes(x=cost,y=error,color=kernel)) + geom_line() + scale_x_log10() + geom_point()
+results = expand_grid(kernel=c("linear","polynomial","radial","sigmoid"), cost=exp(seq(-6,3,0.1))) %>% rowwise() %>% mutate(error = mean(cv.error(Class~., svm, data, 10, kernel=kernel, cost=cost, degree=2)))
+results %>% ggplot(aes(x=cost,y=error,color=kernel)) + geom_line() + geom_point()
+results
 ```
+
+LOOCV errors
+
+LOOCV error tree
+```{r}
+err = cv.error(Class ~ ., tree, data, nrow(data))
+mean(err)
+```
+LOOCV tree bagging
+```{r}
+err = cv.error(Class ~ ., randomForest, data, nrow(data), mtry = ncol(data) - 1, importance = T)
+mean(err)
+```
+
+LOOCV RandomForest
+```{r}
+err = cv.error(Class ~ ., randomForest, data, nrow(data), importance = T)
+mean(err)
+```
+
+LOOCV SVM
+```{r}
+err = cv.error(Class ~ ., svm, data, nrow(data))
+mean(err)
+```
+
+LOOCV Naive Bayes 
+```{r}
+err = cv.error(Class ~ ., naiveBayes, data, nrow(data))
+mean(err)
+```
+
+
+kNN classification
 
 ```{r}
-k_value = seq(2, 10, 1)
-error = k_value %>% map_dbl(function(r) {mean(cv.error(formula = Class ~ . - SpecimenNumber, svm, data, 5, kernel="polynomial", degree=2))})
-tibble(k_value = k_value, error = error) %>% ggplot(aes(x=k_value, y=error)) + geom_line()
+require(class)
+```
+
+
+```{r}
+
+
+indexes = sample(nrow(data))
+  errs = c(1:nrow(data)) %>% map_dbl(function(i) {
+    indexes.test = indexes[c((nrow(data)/nrow(data)*(i-1)+1):(nrow(data)/nrow(data)*i))] # 1 -> n/k, (n/k) + 1 -> 2*(n/k), ...
+    m = knn(data[-indexes.test,],indexes.test, data["SpecimenNumber"], k=13)
+    predicted.y = predict(m, data[indexes.test,], type = "class")
+    actual.y = data[indexes.test, as.character(f_lhs(Class ~ .))]
+    confusion.matrix = table(actual.y, predicted.y)
+    1-sum(diag(confusion.matrix))/sum(confusion.matrix)
+  })
+  names(errs) = paste0("fold", c(1:nrow(data)))
+  errs
+```
 ```
 
 
 
 
-      
-      
+
+
