@@ -40,7 +40,8 @@ User defined functions
 First we import the csv
 ```{r}
 #data = read.csv("C:\\Users\\aleks\\Documents\\drive\\uni\\Progetti\\ML\\progetti 2019_20\\leaf\\leaf.csv")
-data = read.csv("/home/peiva/Documents/Sync documents/units/introduction to machine learning and evolutionary robotics/progetti_2019_20/leaf identification/leaf.csv")
+#data = read.csv("/home/peiva/Documents/Sync documents/units/introduction to machine learning and evolutionary robotics/progetti_2019_20/leaf identification/leaf.csv")
+data = read.csv("/home/peiva/Documents/Sync documents/Ivan/units/introduction to machine learning and evolutionary robotics/progetti_2019_20/leaf identification/leaf.csv")
 ```
 
 Change column names
@@ -50,18 +51,16 @@ colnames(data) <- c("Class","SpecimenNumber","Eccentricity","AspectRatio","Elong
                     "MaximalIndentationDepth","Lobedness","AverageIntensity" , 
                     "AverageContrast","Smoothness","ThirdMoment","Uniformity","Entropy")
 # remove specimen count column
-data = data[,-2]
+# data = data[,-2]
+# SpecimenCount value reduces OOB error on RF by 3%, keep it
 ```
 
-
-Histogram (to modify)
+Histogram, available observations count
 ```{r}
+count.byClass = data %>% group_by(Class) %>% count(Class)
+colnames(count.byClass) = c("SpecimenClass", "count")
 
-we <- data$Class
-we <- gsub(",", "", we)   # remove comma
-we <- as.numeric(we)      # turn into numbers
-hist(we)
-
+count.byClass %>% ggplot(aes(x = SpecimenClass, y = count)) + geom_col()
 ```
 
 
@@ -79,12 +78,14 @@ data$Class = as.factor(data$Class) # otherwise randomForest assumes regression
 Import random forest
 ```{r}
 require(randomForest)
+require(tree)
 ```
 
 Learn tree - based models
 ```{r}
 modelRF = randomForest(Class ~ ., data, importance = T) # specimen number not relevant for classification
 modelTB = randomForest(Class ~ ., data, mtry = ncol(data) - 1, importance = T) # tree bagging, same as random forest, but m = considering all variables - Class
+modelST = tree(Class ~ ., data)
 ```
 
 Random forest errors
@@ -92,50 +93,36 @@ Random forest errors
 modelRF$confusion
 head(modelRF$err.rate)
 ```
+
 Tree bagging errors
 ```{r}
 modelTB$confusion
 head(modelTB$err.rate)
 ```
 
-Random forest confusion matrix and OOB, from lab3.Rmd
+Random forest and tree bagging confusion matrix and OOB, from lab3.Rmd
 ```{r}
 confusion.matrix.RF = modelRF$confusion[,-ncol(modelRF$confusion)]
 1-sum(diag(confusion.matrix.RF))/sum(confusion.matrix.RF)
-```
 
-Tree bagging confusion matrix and OOB
-```{r}
 confusion.matrix.TB = modelTB$confusion[,-ncol(modelTB$confusion)]
 1-sum(diag(confusion.matrix.TB))/sum(confusion.matrix.TB)
 ```
 
-Considering variable importance
+Random forest and tree bagging variable importance
 ```{r}
 modelRF$importance
 modelTB$importance
 ```
 
-Error rate with 5-CV
+From lab3, error varying B with 10-CV
 ```{r}
-cv.error(Class ~ ., randomForest, data, nrow(data))
+cv.error.RF.B = c(1:100) %>% map_dfr(function(b) {c(B = b, cv.test.err = mean(cv.error(Class ~ ., randomForest, data, 10, ntree=b)))}) %>% ggplot(aes(x=B, y=cv.test.err)) + geom_line() + ylim(0, 1)
 ```
 
-Error rates with different k-CV ("long" computation time) - NOT USEFUL
+Adapted from lab3, error varying B using OOB instead of CV
 ```{r}
-k_value = seq(2, 10, 1)
-error = k_value %>% map_dbl(function(r) {mean(cv.error(Class~.-SpecimenNumber, randomForest, data, r))})
-tibble(k_value = k_value, error = error) %>% ggplot(aes(x=k_value, y=error)) + geom_line()
-```
-
-From lab3
-```{r}
-cv.error.b = c(1:100) %>% map_dfr(function(b) {c(B = b, cv.test.err = mean(cv.error(Class ~ ., randomForest, data, 10, ntree=b)))}) %>% ggplot(aes(x=B, y=cv.test.err)) + geom_line() + ylim(0, 1)
-```
-
-Adapted from lab3, using oob instead of CV
-```{r}
-oob.error.b = c(1:100) %>% map_dfr(function(b) {
+oob.error.RF.B = c(1:100) %>% map_dfr(function(b) {
   model = randomForest(Class ~ ., data, ntree = b)
   confusion.matrix = model$confusion[,-ncol(model$confusion)]
   oob.error = 1-sum(diag(confusion.matrix))/sum(confusion.matrix)
@@ -144,61 +131,28 @@ oob.error.b = c(1:100) %>% map_dfr(function(b) {
 
 TODO: estimate learning techniques with CV (auto parameter or with predefined parameter)
       add SVM and single tree learning techniques (and also boosting variant?)
-      
-      
-SINGLE TREE
 
+LOOCV errors for multiple k_min parameters
 ```{r}
-require(tree)
+cv.error.ST.kmin = c(1:50) %>% map_dfr(function(k_min) {c(k = k_min, cv.test.err = mean(cv.error(Class ~ ., tree, data, nrow(data), mindev = 0, minsize = k_min)))}) %>% ggplot(aes(x=k, y=cv.test.err)) + geom_line() + ylim(0, 1)
 ```
-
-build tree
-```{r}
-modelST = tree(Class ~ ., data)
-```
-```{r}
-plot(singleTree)
-text(singleTree)
-```
-
-```{r}
-cv.modelST = cv.error(Class ~ ., tree , data, nrow(data))
-mean(cv_tree)
-```
-
-10-CV errors for multiple single tree parameters
-```{r}
-cv.error.kmin.ST = c(1:50) %>% map_dfr(function(k_min) {c(k = k_min, cv.test.err = mean(cv.error(Class ~ ., tree, data, nrow(data), mindev = 0, minsize = k_min)))}) %>% ggplot(aes(x=k, y=cv.test.err)) + geom_line() + ylim(0, 1)
-```
-
-
-```{r}
-k_value = seq(2, 300 , 10)
-error = k_value %>% map_dbl(function(r) {mean(cv.error(Class ~ ., tree , data, 5))})
-tibble(k_value = k_value, error = error) %>% ggplot(aes(x=k_value, y=error)) + geom_line() + ylim(0,1)
-```
-
-
-      
-SVM 
-
+   
+Learn SVM model
 ```{r}
 require(e1071)
 ```
 
-build svm model
+build SVM model
 Default kernel: radial
 ```{r}
-modelSVM = svm(Class ~ . - SpecimenNumber, data)
+modelSVM = svm(Class ~ ., data)
 ```
 
-
-We can use the cv.error function 
-
+CV errors for multiple parameters (from lab4)
 ```{r}
-cv.error(formula = Class ~ . - SpecimenNumber, svm, data, 5, kernel="polynomial", degree=2)
+results = expand_grid(kernel=c("linear","polynomial","radial","sigmoid"), cost=exp(seq(-6,8,1))) %>% rowwise() %>% mutate(error = mean(cv.error(isVersicolor~., svm, d, 10, kernel=kernel, cost=cost, degree=2)))
+results %>% ggplot(aes(x=cost,y=error,color=kernel)) + geom_line() + scale_x_log10() + geom_point()
 ```
-
 
 ```{r}
 k_value = seq(2, 10, 1)
