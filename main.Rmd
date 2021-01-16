@@ -127,21 +127,32 @@ varImpPlot(mtcars.rf)
 ```
 
 
-From lab3, error varying B with 10-CV
+From lab3, error varying B with 10-CV 
 ```{r}
 cv.error.RF.B = c(1:100) %>% map_dfr(function(b) {c(B = b, cv.test.err = mean(cv.error(Class ~ ., randomForest, data, 10, ntree=b)))}) %>% ggplot(aes(x=B, y=cv.test.err)) + geom_line() + ylim(0, 1)
 cv.error.RF.B
 ```
 
-Adapted from lab3, error varying B using OOB instead of CV
+Adapted from lab3, error varying B using OOB instead of CV (RandomForest)
 ```{r}
-oob.error.RF.B = c(1:100) %>% map_dfr(function(b) {
+oob.error.RF.B = c(1:1000) %>% map_dfr(function(b) {
   model = randomForest(Class ~ ., data, ntree = b)
   confusion.matrix = model$confusion[,-ncol(model$confusion)]
   oob.error = 1-sum(diag(confusion.matrix))/sum(confusion.matrix)
-  c(B = b, oob.test.error = oob.error)}) %>% ggplot(aes(x = B, y = oob.test.error)) + geom_line() + ylim(0, 1)
+  c(B = b, oob.test.error = oob.error)}) %>% ggplot(aes(x = B, y = oob.test.error)) + geom_line() + ylim(0.1, 0.6)
 oob.error.RF.B
 ```
+Also for Tree Bagging
+```{r}
+oob.error.RF.B = c(1:1000) %>% map_dfr(function(b) {
+  model = randomForest(Class ~ ., data, mtry = ncol(data) - 1, ntree = b)
+  confusion.matrix = model$confusion[,-ncol(model$confusion)]
+  oob.error = 1-sum(diag(confusion.matrix))/sum(confusion.matrix)
+  c(B = b, oob.test.error = oob.error)}) %>% ggplot(aes(x = B, y = oob.test.error)) + geom_line() + ylim(0.1, 0.6)
+oob.error.RF.B
+```
+
+
 
 LOOCV errors for multiple k_min parameters
 ```{r}
@@ -149,7 +160,7 @@ cv.error.ST.kmin = c(1:50) %>% map_dfr(function(k_min) {c(k = k_min, cv.test.err
 cv.error.ST.kmin
 ```
    
-Learn SVM model
+SVM model
 ```{r}
 require(e1071)
 ```
@@ -203,6 +214,9 @@ kNN classification
 
 ```{r}
 require(class)
+```
+
+```{r}
 ```
 
 
