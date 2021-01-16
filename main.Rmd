@@ -144,12 +144,22 @@ oob.error.RF.B
 ```
 Also for Tree Bagging
 ```{r}
-oob.error.RF.B = c(1:1000) %>% map_dfr(function(b) {
+oob.error.TB.B = c(1:1000) %>% map_dfr(function(b) {
   model = randomForest(Class ~ ., data, mtry = ncol(data) - 1, ntree = b)
   confusion.matrix = model$confusion[,-ncol(model$confusion)]
   oob.error = 1-sum(diag(confusion.matrix))/sum(confusion.matrix)
   c(B = b, oob.test.error = oob.error)}) %>% ggplot(aes(x = B, y = oob.test.error)) + geom_line() + ylim(0.1, 0.6)
-oob.error.RF.B
+oob.error.TB.B
+```
+Study of m for random forest
+
+```{r}
+oob.error.RF.m = c(1:15) %>% map_dfr(function(m) {
+  model = randomForest(Class ~ ., data, mtry = m)
+  confusion.matrix = model$confusion[,-ncol(model$confusion)]
+  oob.error = 1-sum(diag(confusion.matrix))/sum(confusion.matrix)
+  c(m = m, oob.test.error = oob.error)}) %>% ggplot(aes(x = m, y = oob.test.error)) + geom_line() + ylim(0.2, 0.3)
+oob.error.RF.m
 ```
 
 
@@ -210,13 +220,22 @@ mean(err)
 ```
 
 
-kNN classification
+kNN classification (with caret?)
 
 ```{r}
 require(class)
+require(caret)
 ```
 
 ```{r}
+trControl <- trainControl(method  = "cv",
+                          number  = 5)
+fit <- train(Species ~ .,
+             method     = "knn",
+             tuneGrid   = expand.grid(k = 1:10),
+             trControl  = trControl,
+             metric     = "Accuracy",
+             data       = data)
 ```
 
 
@@ -226,7 +245,7 @@ require(class)
 indexes = sample(nrow(data))
   errs = c(1:nrow(data)) %>% map_dbl(function(i) {
     indexes.test = indexes[c((nrow(data)/nrow(data)*(i-1)+1):(nrow(data)/nrow(data)*i))] # 1 -> n/k, (n/k) + 1 -> 2*(n/k), ...
-    m = knn(data[-indexes.test,],indexes.test, data["SpecimenNumber"], k=13)
+    m = knn(data[-indexes.test,],indexes.test, data[indexes.test,"SpecimenNumber"], k=13)
     predicted.y = predict(m, data[indexes.test,], type = "class")
     actual.y = data[indexes.test, as.character(f_lhs(Class ~ .))]
     confusion.matrix = table(actual.y, predicted.y)
