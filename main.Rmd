@@ -34,7 +34,7 @@ cv.error = function(formula, learner, data, k, ...) {
 
 User defined functions
 ```{r}
-data["SpecimenNumber"]
+
 ```
 
 First we import the csv
@@ -75,7 +75,7 @@ data$Class = as.factor(data$Class) # otherwise randomForest assumes regression
 # mapvalues(data$Class, from = c(...), to = c(...)) to rename factor column names
 ```
 
-Import random forest
+Import random forest and tree
 ```{r}
 require(randomForest)
 require(tree)
@@ -88,13 +88,13 @@ modelTB = randomForest(Class ~ ., data, mtry = ncol(data) - 1, importance = T) #
 modelST = tree(Class ~ ., data)
 ```
 
-Random forest errors
+Random forest errors 
 ```{r}
 modelRF$confusion
 head(modelRF$err.rate)
 ```
 
-Tree bagging errors
+Tree bagging errors 
 ```{r}
 modelTB$confusion
 head(modelTB$err.rate)
@@ -114,6 +114,18 @@ Random forest and tree bagging variable importance
 modelRF$importance
 modelTB$importance
 ```
+Plot variable importance RF
+```{r}
+mtcars.rf <- modelRF
+varImpPlot(mtcars.rf)
+```
+
+Plot variable importance TB
+```{r}
+mtcars.rf <- modelTB
+varImpPlot(mtcars.rf)
+```
+
 
 From lab3, error varying B with 10-CV
 ```{r}
