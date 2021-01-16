@@ -151,7 +151,7 @@ oob.error.TB.B = c(1:1000) %>% map_dfr(function(b) {
   c(B = b, oob.test.error = oob.error)}) %>% ggplot(aes(x = B, y = oob.test.error)) + geom_line() + ylim(0.1, 0.6)
 oob.error.TB.B
 ```
-Study of m for random forest
+Study of m for random forest (with OOB error)
 
 ```{r}
 oob.error.RF.m = c(1:15) %>% map_dfr(function(m) {
@@ -163,10 +163,9 @@ oob.error.RF.m
 ```
 
 
-
 LOOCV errors for multiple k_min parameters
 ```{r}
-cv.error.ST.kmin = c(1:50) %>% map_dfr(function(k_min) {c(k = k_min, cv.test.err = mean(cv.error(Class ~ ., tree, data, nrow(data), mindev = 0, minsize = k_min)))}) %>% ggplot(aes(x=k, y=cv.test.err)) + geom_line() + ylim(0, 1)
+cv.error.ST.kmin = c(1:50) %>% map_dfr(function(k_min) {c(k = k_min, cv.test.err = mean(cv.error(Class ~ ., tree, data, nrow(data), mindev = 0, minsize = k_min)))}) %>% ggplot(aes(x=k, y=cv.test.err)) + geom_line() + ylim(0.25, 0.8)
 cv.error.ST.kmin
 ```
    
@@ -183,7 +182,7 @@ modelSVM = svm(Class ~ ., data)
 
 CV errors for multiple parameters (from lab4)
 ```{r}
-results = expand_grid(kernel=c("linear","polynomial","radial","sigmoid"), cost=exp(seq(-6,3,0.1))) %>% rowwise() %>% mutate(error = mean(cv.error(Class~., svm, data, 10, kernel=kernel, cost=cost, degree=2)))
+results = expand_grid(kernel=c("linear","polynomial","radial","sigmoid"), cost=exp(seq(-6,2,0.1))) %>% rowwise() %>% mutate(error = mean(cv.error(Class~., svm, data, 10, kernel=kernel, cost=cost, degree=2)))
 results %>% ggplot(aes(x=cost,y=error,color=kernel)) + geom_line() + geom_point()
 results
 ```
