@@ -39,8 +39,8 @@ User defined functions
 
 First we import the csv
 ```{r}
-data = read.csv("C:\\Users\\aleks\\Documents\\drive\\uni\\Progetti\\ML\\progetti 2019_20\\leaf\\leaf.csv")
-#data = read.csv("/home/peiva/Documents/Sync documents/units/introduction to machine learning and evolutionary robotics/progetti_2019_20/leaf identification/leaf.csv")
+#data = read.csv("C:\\Users\\aleks\\Documents\\drive\\uni\\Progetti\\ML\\progetti 2019_20\\leaf\\leaf.csv")
+data = read.csv("/home/peiva/Documents/Sync documents/units/introduction to machine learning and evolutionary robotics/progetti_2019_20/leaf identification/leaf.csv")
 #data = read.csv("/home/peiva/Documents/Sync documents/Ivan/units/introduction to machine learning and evolutionary robotics/progetti_2019_20/leaf identification/leaf.csv")
 ```
 
@@ -58,9 +58,9 @@ colnames(data) <- c("Class","SpecimenNumber","Eccentricity","AspectRatio","Elong
 Histogram, available observations count
 ```{r}
 count.byClass = data %>% group_by(Class) %>% count(Class)
-colnames(count.byClass) = c("SpecimenClass", "count")
+colnames(count.byClass) = c("Classe di pianta", "Numero osservazioni")
 
-count.byClass %>% ggplot(aes(x = SpecimenClass, y = count)) + geom_col()
+histPlot = count.byClass %>% ggplot(aes(x = `Classe di pianta`, y = `Numero osservazioni`)) + geom_col()
 ```
 
 
@@ -116,14 +116,14 @@ modelTB$importance
 ```
 Plot variable importance RF
 ```{r}
-mtcars.rf <- modelRF
-varImpPlot(mtcars.rf)
+`Importanza variabili Random Forest` <- modelRF
+varimp.RF = varImpPlot(`Importanza variabili Random Forest`)
 ```
 
 Plot variable importance TB
 ```{r}
-mtcars.rf <- modelTB
-varImpPlot(mtcars.rf)
+`Importanza variabili Tree Bagging` <- modelTB
+varImpPlot(`Importanza variabili Tree Bagging`)
 ```
 
 
@@ -139,34 +139,42 @@ oob.error.RF.B = c(1:1000) %>% map_dfr(function(b) {
   model = randomForest(Class ~ ., data, ntree = b)
   confusion.matrix = model$confusion[,-ncol(model$confusion)]
   oob.error = 1-sum(diag(confusion.matrix))/sum(confusion.matrix)
-  c(B = b, oob.test.error = oob.error)}) %>% ggplot(aes(x = B, y = oob.test.error)) + geom_line() + ylim(0.1, 0.6)
+  c(`Valore parametro B` = b, `Errore` = oob.error)}) %>% ggplot(aes(x = `Valore parametro B`, y = `Errore`)) + geom_line() + ylim(0, 1)
 oob.error.RF.B
 ```
+
 Also for Tree Bagging
 ```{r}
 oob.error.TB.B = c(1:1000) %>% map_dfr(function(b) {
   model = randomForest(Class ~ ., data, mtry = ncol(data) - 1, ntree = b)
   confusion.matrix = model$confusion[,-ncol(model$confusion)]
   oob.error = 1-sum(diag(confusion.matrix))/sum(confusion.matrix)
-  c(B = b, oob.test.error = oob.error)}) %>% ggplot(aes(x = B, y = oob.test.error)) + geom_line() + ylim(0.1, 0.6)
+  c(B = `Valore parametro B`, `Errore` = oob.error)}) %>% ggplot(aes(x = `Valore parametro B`, y = `Errore`)) + geom_line() + ylim(0, 1) # errors between 0 and 1
 oob.error.TB.B
 ```
-Study of m for random forest (with OOB error)
 
+Study of m for random forest (with OOB error)
 ```{r}
 oob.error.RF.m = c(1:15) %>% map_dfr(function(m) {
   model = randomForest(Class ~ ., data, mtry = m)
   confusion.matrix = model$confusion[,-ncol(model$confusion)]
   oob.error = 1-sum(diag(confusion.matrix))/sum(confusion.matrix)
-  c(m = m, oob.test.error = oob.error)}) %>% ggplot(aes(x = m, y = oob.test.error)) + geom_line() + ylim(0.2, 0.3)
+  c(`Valore parametro m` = m, `Errore` = oob.error)}) %>% ggplot(aes(x = `Errore parametro m`, y = `Errore`)) + geom_line() + ylim(0, 1)
 oob.error.RF.m
 ```
 
 
 LOOCV errors for multiple k_min parameters
 ```{r}
-cv.error.ST.kmin = c(1:50) %>% map_dfr(function(k_min) {c(k = k_min, cv.test.err = mean(cv.error(Class ~ ., tree, data, nrow(data), mindev = 0, minsize = k_min)))}) %>% ggplot(aes(x=k, y=cv.test.err)) + geom_line() + ylim(0.25, 0.8)
+cv.error.ST.kmin = c(1:50) %>% map_dfr(function(k_min) {c(`Valore parametro k_min` = k_min, `Errore` = mean(cv.error(Class ~ ., tree, data, nrow(data), mindev = 0, minsize = k_min)))}) %>% ggplot(aes(x=`Valore parametro k_min`, y=`Errore`)) + geom_line() + ylim(0, 1)
 cv.error.ST.kmin
+```
+Optimal values for tree based methods
+```{r}
+optimal.RF.B = which(oob.error.RF.B$data$Errore == min(oob.error.RF.B$data$Errore)) # already ordered, use index instead of value
+optimal.RF.m = which(oob.error.RF.m$data$Errore == min(oob.error.RF.m$data$Errore))
+optimal.TB.B = which(oob.error.TB.B$data$Errore == min(oob.error.TB.B$data$Errore))
+optimal.ST.kmin = which(cv.error.ST.kmin$data$Errore == min(cv.error.ST.kmin$data$Errore))
 ```
    
 SVM model
@@ -182,40 +190,43 @@ modelSVM = svm(Class ~ ., data)
 
 CV errors for multiple parameters (from lab4)
 ```{r}
-results = expand_grid(kernel=c("linear","polynomial","radial","sigmoid"), cost=exp(seq(-6,2,0.1))) %>% rowwise() %>% mutate(error = mean(cv.error(Class~., svm, data, 10, kernel=kernel, cost=cost, degree=2)))
-results %>% ggplot(aes(x=cost,y=error,color=kernel)) + geom_line() + geom_point()
-results
+cv.error.SVM.C = expand_grid(kernel=c("linear","polynomial","radial","sigmoid"), `Valore parametro C`=exp(seq(-6,8,0.5))) %>% rowwise() %>% mutate(`Errore` = mean(cv.error(Class~., svm, data, 10, kernel=kernel, cost=`Valore parametro C`, degree=2)))
+cv.error.SVM.C %>% ggplot(aes(x=`Valore parametro C`,y=`Errore`,color=kernel)) + scale_x_log10() + geom_line() + geom_point()
+cv.error.SVM.C
 ```
 
-LOOCV errors
-
-LOOCV error tree
+Optimal values for SVM
 ```{r}
-err = cv.error(Class ~ ., tree, data, nrow(data))
-mean(err)
+optimal.SVM.C = exp(-6 + (which(cv.error.SVM.C$Errore == min(cv.error.SVM.C$Errore)) - 1) * 0.5) # index times forward in sequence seq(-6,8,0.5)
+optimal.SVM.kernel.table = cv.error.SVM.C[which(cv.error.SVM.C$Errore == min(cv.error.SVM.C$Errore)),1]
+optimal.SVM.kernel = string(optimal.SVM.kernel$kernel)
+```
+
+LOOCV errors with detected optimal values
+
+LOOCV tree
+```{r}
+mean(cv.error(Class ~ ., tree, data, nrow(data), minsize = optimal.ST.kmin))
 ```
 LOOCV tree bagging
 ```{r}
-err = cv.error(Class ~ ., randomForest, data, nrow(data), mtry = ncol(data) - 1, importance = T)
-mean(err)
+mean(cv.error(Class ~ ., randomForest, data, nrow(data), mtry = ncol(data) - 1, B = optimal.TB.B)) # or could leave default
+
 ```
 
 LOOCV RandomForest
 ```{r}
-err = cv.error(Class ~ ., randomForest, data, nrow(data), importance = T)
-mean(err)
+mean(cv.error(Class ~ ., randomForest, data, nrow(data), B = optimal.RF.B, mtry = optimal.RF.m))
 ```
 
 LOOCV SVM
 ```{r}
-err = cv.error(Class ~ ., svm, data, nrow(data))
-mean(err)
+mean(cv.error(Class ~ ., svm, data, nrow(data), kernel = optimal.SVM.kernel, cost = optimal.SVM.C))
 ```
 
 LOOCV Naive Bayes 
 ```{r}
-err = cv.error(Class ~ ., naiveBayes, data, nrow(data))
-mean(err)
+mean(cv.error(Class ~ ., naiveBayes, data, nrow(data)))
 ```
 
 
