@@ -43,8 +43,8 @@ oob.error.RF = function(formula, data, ...) {
 
 First we import the csv
 ```{r}
-#data = read.csv("C:\\Users\\aleks\\Documents\\drive\\uni\\Progetti\\ML\\progetti 2019_20\\leaf\\leaf.csv")
-data = read.csv("/home/peiva/Documents/Sync documents/units/introduction to machine learning and evolutionary robotics/progetti_2019_20/leaf identification/leaf.csv")
+data = read.csv("C:\\Users\\aleks\\Documents\\drive\\uni\\Progetti\\ML\\progetti 2019_20\\leaf\\leaf.csv")
+#data = read.csv("/home/peiva/Documents/Sync documents/units/introduction to machine learning and evolutionary robotics/progetti_2019_20/leaf identification/leaf.csv")
 #data = read.csv("/home/peiva/Documents/Sync documents/Ivan/units/introduction to machine learning and evolutionary robotics/progetti_2019_20/leaf identification/leaf.csv")
 ```
 
@@ -287,12 +287,21 @@ mean(cv.error(Class ~ ., naiveBayes, data, nrow(data)))
 ```
 
 
-kNN classification (with caret?)
 
+Random classifier
 ```{r}
-require(class)
-require(caret)
+error = 0
+  for(i in c(1:nrow(data))){
+  x = sample(data[,1] , size =1)
+    if(x!=data[i,1]){
+      error = error + 1;
+    }  
+  }
+error_rate = error/nrow(data);
+error_rate
 ```
+
+kNN classification 
 
 ```{r}
 trControl <- trainControl(method  = "cv",
@@ -320,11 +329,5 @@ indexes = sample(nrow(data))
   })
   names(errs) = paste0("fold", c(1:nrow(data)))
   errs
-```
-```
-
-
-
-
 
 
