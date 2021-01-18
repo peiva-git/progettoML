@@ -43,8 +43,8 @@ oob.error.RF = function(formula, data, ...) {
 
 First we import the csv
 ```{r}
-data = read.csv("C:\\Users\\aleks\\Documents\\drive\\uni\\Progetti\\ML\\progetti 2019_20\\leaf\\leaf.csv")
-#data = read.csv("/home/peiva/Documents/Sync documents/units/introduction to machine learning and evolutionary robotics/progetti_2019_20/leaf identification/leaf.csv")
+#data = read.csv("C:\\Users\\aleks\\Documents\\drive\\uni\\Progetti\\ML\\progetti 2019_20\\leaf\\leaf.csv")
+data = read.csv("/home/peiva/Documents/Sync documents/units/introduction to machine learning and evolutionary robotics/progetti_2019_20/leaf identification/leaf.csv")
 #data = read.csv("/home/peiva/Documents/Sync documents/Ivan/units/introduction to machine learning and evolutionary robotics/progetti_2019_20/leaf identification/leaf.csv")
 ```
 
@@ -122,7 +122,7 @@ modelTB$importance
 Plot variable importance RF
 ```{r}
 `Importanza variabili Random Forest` <- modelRF
-varimp.RF = varImpPlot(`Importanza variabili Random Forest`)
+varImpPlot(`Importanza variabili Random Forest`)
 ```
 
 Plot variable importance TB
@@ -137,6 +137,7 @@ From lab3, error varying B with 10-CV
 cv.error.RF.B = c(1:100) %>% map_dfr(function(b) {c(B = b, cv.test.err = mean(cv.error(Class ~ ., randomForest, data, 10, ntree=b)))}) %>% ggplot(aes(x=B, y=cv.test.err)) + geom_line() + ylim(0, 1)
 cv.error.RF.B
 ```
+
 Study of B for Tree bagging
 ```{r}
 oob.error.TB.B = c(1:1000) %>% map_dfr(function(b) {
@@ -219,9 +220,9 @@ scatterplot3d(x = oob.error.B.m$B, y = oob.error.B.m$m, z = oob.error.B.m$err, x
 ```
 
 
-LOOCV errors for multiple k_min parameters
+LOOCV errors for multiple k_min parameters (start from 2 not 1)
 ```{r}
-cv.error.ST.kmin = c(1:50) %>% map_dfr(function(k_min) {c(`Valore parametro k_min` = k_min, `Errore` = mean(cv.error(Class ~ ., tree, data, nrow(data), mindev = 0, minsize = k_min)))}) %>% ggplot(aes(x=`Valore parametro k_min`, y=`Errore`)) + geom_line() + ylim(0, 1)
+cv.error.ST.kmin = c(2:50) %>% map_dfr(function(k_min) {c(`Valore parametro k_min` = k_min, `Errore` = mean(cv.error(Class ~ ., tree, data, nrow(data), minsize = k_min)))}) %>% ggplot(aes(x=`Valore parametro k_min`, y=`Errore`)) + geom_line() + ylim(0, 1)
 cv.error.ST.kmin
 ```
 
@@ -265,15 +266,15 @@ LOOCV tree
 ```{r}
 mean(cv.error(Class ~ ., tree, data, nrow(data), minsize = optimal.ST.kmin))
 ```
+
 LOOCV tree bagging
 ```{r}
-mean(cv.error(Class ~ ., randomForest, data, nrow(data), mtry = ncol(data) - 1, B = optimal.TB.B)) # or could leave default
-
+mean(cv.error(Class ~ ., randomForest, data, nrow(data), mtry = ncol(data) - 1, ntree = optimal.TB.B)) # or could leave default
 ```
 
 LOOCV RandomForest
 ```{r}
-mean(cv.error(Class ~ ., randomForest, data, nrow(data), B = optimal.RF.B, mtry = optimal.RF.m))
+mean(cv.error(Class ~ ., randomForest, data, nrow(data), ntree = optimal.RF.B, mtry = optimal.RF.m))
 ```
 
 LOOCV SVM
@@ -297,8 +298,8 @@ error = 0
       error = error + 1;
     }  
   }
-error_rate = error/nrow(data);
-error_rate
+error.rate.RC = error/nrow(data);
+error.rate.RC
 ```
 
 kNN classification 
