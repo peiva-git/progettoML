@@ -315,8 +315,9 @@ classes = data$Class # true classifications of training set
 
 ```{r}
 cv.error.knn = c(1:200) %>% map_dfr(function(k) {
-  c(`Valore parametro k` = k, Errore = length(which(classes != knn.cv(norm.data, classes, k = k)))/length(classes))
-})
+  c(`Valore parametro k` = k, Errore = length(which(classes != knn.cv(norm.data, classes, k = k)))/(length(classes)))
+}) %>% ggplot(aes(x = `Valore parametro k`, y = Errore)) + geom_line()
+cv.error.knn
 
 index.test = sample(1:nrow(norm.data), size = 1)
 test = norm.data[index.test,]
@@ -338,15 +339,18 @@ for (i in c(1:nrow(norm.data))) {
 }
 ```
 
+Alternative error evaluation (similar results to graph above)
 ```{r}
+prova.norm.data = norm.data %>% mutate(data$Class)
+
 trControl <- trainControl(method  = "cv",
-                          number  = 5)
-fit <- train(Species ~ .,
+                          number  = 10)
+fit <- train(`data$Class` ~ .,
              method     = "knn",
-             tuneGrid   = expand.grid(k = 1:10),
+             tuneGrid   = expand.grid(k = 1:200),
              trControl  = trControl,
              metric     = "Accuracy",
-             data       = data)
+             data       = prova.norm.data)
 ```
 
 
