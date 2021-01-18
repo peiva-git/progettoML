@@ -292,9 +292,9 @@ mean(cv.error(Class ~ ., naiveBayes, data, nrow(data)))
 Random classifier
 ```{r}
 error = 0
-  for(i in c(1:nrow(data))){
-  x = sample(data[,1] , size =1)
-    if(x!=data[i,1]){
+  for(i in c(1:nrow(data))) {
+    x = sample(data[,1] , size =1)
+    if(x!=data[i,1]) {
       error = error + 1;
     }  
   }
@@ -303,6 +303,40 @@ error.rate.RC
 ```
 
 kNN classification 
+
+Normalize data
+```{r}
+norm.data = c(1:nrow(data)) %>% map_dfr(function(r) {
+  data[r, -c(1, 2)]/max(data[r, -c(1, 2)])
+})
+classes = data$Class # true classifications of training set
+```
+
+
+```{r}
+cv.error.knn = c(1:200) %>% map_dfr(function(k) {
+  c(`Valore parametro k` = k, Errore = length(which(classes != knn.cv(norm.data, classes, k = k)))/length(classes))
+})
+
+index.test = sample(1:nrow(norm.data), size = 1)
+test = norm.data[index.test,]
+train = norm.data[-index.test,]
+classes.train = data[-index.test, 1]
+
+knn(train, test, classes.train, k = 3)
+```
+
+
+```{r}
+for (i in c(1:nrow(norm.data))) {
+  test.index = sample(1:nrow(norm.data))
+  test = norm.data[test.index,]
+  train = norm.data[-test.index,]
+  classes.train = data[-test.index,1]
+  
+  knn(train, test, classes.train)
+}
+```
 
 ```{r}
 trControl <- trainControl(method  = "cv",
