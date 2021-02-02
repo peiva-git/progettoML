@@ -39,13 +39,19 @@ oob.error.RF = function(formula, data, ...) {
   confusion.matrix.RF = model.RF$confusion[,-ncol(model.RF$confusion)]
   1-sum(diag(confusion.matrix.RF))/sum(confusion.matrix.RF)
 }
+
+oob.error.TB = function(formula, data, ...) {
+  model.TB = randomForest(formula, data, mtry = ncol(data) - 1, ...)
+  confusion.matrix.TB = model.TB$confusion[,-ncol(model.TB$confusion)]
+  1 - sum(diag(confusion.matrix.TB))/sum(confusion.matrix.TB)
+}
 ```
 
 First we import the csv
 ```{r}
 #data = read.csv("C:\\Users\\aleks\\Documents\\drive\\uni\\Progetti\\ML\\progetti 2019_20\\leaf\\leaf.csv")
-data = read.csv("/home/peiva/Documents/Sync documents/units/introduction to machine learning and evolutionary robotics/progetti_2019_20/leaf identification/leaf.csv")
-#data = read.csv("/home/peiva/Documents/Sync documents/Ivan/units/introduction to machine learning and evolutionary robotics/progetti_2019_20/leaf identification/leaf.csv")
+#data = read.csv("/home/peiva/Documents/Sync documents/units/introduction to machine learning and evolutionary robotics/progetti_2019_20/leaf identification/leaf.csv")
+data = read.csv("/home/peiva/Documents/Sync documents/Ivan/units/introduction to machine learning and evolutionary robotics/progetti_2019_20/leaf identification/leaf.csv")
 ```
 
 Change column names
@@ -55,7 +61,7 @@ colnames(data) <- c("Class","SpecimenNumber","Eccentricity","AspectRatio","Elong
                     "MaximalIndentationDepth","Lobedness","AverageIntensity" , 
                     "AverageContrast","Smoothness","ThirdMoment","Uniformity","Entropy")
 # remove specimen count column
-# data = data[,-2]
+ data = data[,-2]
 # SpecimenCount value reduces OOB error on RF by 3%, keep it
 ```
 
@@ -133,29 +139,30 @@ varImpPlot(`Importanza variabili Tree Bagging`)
 
 
 From lab3, error varying B with 10-CV 
+
 ```{r}
-cv.error.RF.B = c(1:100) %>% map_dfr(function(b) {c(B = b, cv.test.err = mean(cv.error(Class ~ ., randomForest, data, 10, ntree=b)))}) %>% ggplot(aes(x=B, y=cv.test.err)) + geom_line() + ylim(0, 1)
-cv.error.RF.B
+# cv.error.RF.B = c(1:100) %>% map_dfr(function(b) {c(B = b, cv.test.err = mean(cv.error(Class ~ ., randomForest, data, 10, ntree=b)))}) %>% ggplot(aes(x=B, y=cv.test.err)) + geom_line()
+# cv.error.RF.B
 ```
 
 Study of B for Tree bagging
 ```{r}
-oob.error.TB.B = c(1:1000) %>% map_dfr(function(b) {
-   model = randomForest(Class ~ ., data, mtry = ncol(data) - 1, ntree = b)
-   confusion.matrix = model$confusion[,-ncol(model$confusion)]
-   oob.error = 1-sum(diag(confusion.matrix))/sum(confusion.matrix)
-   c(B = `Valore parametro B`, `Errore` = oob.error)}) %>% ggplot(aes(x = `Valore parametro B`, y = `Errore`)) + geom_line() + ylim(0, 1) # errors between 0 and 1
- oob.error.TB.B
+# oob.error.TB.B = c(1:1000) %>% map_dfr(function(b) {
+#    model = randomForest(Class ~ ., data, mtry = ncol(data) - 1, ntree = b)
+#    confusion.matrix = model$confusion[,-ncol(model$confusion)]
+#    oob.error = 1-sum(diag(confusion.matrix))/sum(confusion.matrix)
+#    c(B = `Valore parametro B`, `Errore` = oob.error)}) %>% ggplot(aes(x = `Valore parametro B`, y = `Errore`)) + geom_line() + ylim(0, 1) # errors between 0 and 1
+#  oob.error.TB.B
 ```
 
 Study of B for random forest
 ```{r}
-oob.error.RF.B = c(1:1000) %>% map_dfr(function(b) {
-   model = randomForest(Class ~ ., data, ntree = b)
-   confusion.matrix = model$confusion[,-ncol(model$confusion)]
-   oob.error = 1-sum(diag(confusion.matrix))/sum(confusion.matrix)
-   c(`Valore parametro B` = b, `Errore` = oob.error)}) %>% ggplot(aes(x = `Valore parametro B`, y = `Errore`)) + geom_line() + ylim(0, 1)
- oob.error.RF.B
+# oob.error.RF.B = c(1:1000) %>% map_dfr(function(b) {
+#    model = randomForest(Class ~ ., data, ntree = b)
+#    confusion.matrix = model$confusion[,-ncol(model$confusion)]
+#    oob.error = 1-sum(diag(confusion.matrix))/sum(confusion.matrix)
+#    c(`Valore parametro B` = b, `Errore` = oob.error)}) %>% ggplot(aes(x = `Valore parametro B`, y = `Errore`)) + geom_line() + ylim(0, 1)
+#  oob.error.RF.B
 ```
 
 Adapted from lab3, error varying B using OOB instead of CV (RandomForest and TreeBagging)
@@ -180,7 +187,8 @@ oob.error.B = c(1:2000) %>% map_dfr(function(b) {
 oob.error.B$`Valore parametro B` = as.numeric(oob.error.B$`Valore parametro B`)
 oob.error.B$Errore = as.double(oob.error.B$Errore)
 
- oob.error.B.plot = ggplot(oob.error.B, (aes(x = `Valore parametro B`, y = `Errore`, color = Modello))) + geom_line()
+oob.error.B.plot = ggplot(oob.error.B, (aes(x = `Valore parametro B`, y = `Errore`, color = Modello))) + geom_line()
+oob.error.B.plot
 ```
 
 Study of m for random forest (with OOB error)
@@ -189,14 +197,14 @@ oob.error.RF.m = c(1:15) %>% map_dfr(function(m) {
   model = randomForest(Class ~ ., data, mtry = m)
   confusion.matrix = model$confusion[,-ncol(model$confusion)]
   oob.error = 1-sum(diag(confusion.matrix))/sum(confusion.matrix)
-  c(`Valore parametro m` = m, `Errore` = oob.error)}) %>% ggplot(aes(x = `Valore parametro m`, y = `Errore`)) + geom_line() + ylim(0, 1)
+  c(`Valore parametro m` = m, `Errore` = oob.error)}) %>% ggplot(aes(x = `Valore parametro m`, y = `Errore`)) + geom_line()
 oob.error.RF.m
 ```
 
 Study m and B at the same time
 ```{r}
-oob.error.B.m = seq(1, 100, 1) %>% map_dfr(function(b) {
-  seq(1, 10, 1) %>% map_dfr(function(m) {
+oob.error.B.m = seq(1, 1000, 1) %>% map_dfr(function(b) {
+  seq(1, 15, 1) %>% map_dfr(function(m) {
     model = randomForest(Class ~ ., data, ntree = b, mtry = m)
     confusion.matrix = model$confusion[,-ncol(model$confusion)]
     oob.error = 1-sum(diag(confusion.matrix))/sum(confusion.matrix)
@@ -222,16 +230,16 @@ scatterplot3d(x = oob.error.B.m$B, y = oob.error.B.m$m, z = oob.error.B.m$err, x
 
 LOOCV errors for multiple k_min parameters (start from 2 not 1)
 ```{r}
-cv.error.ST.kmin = c(2:50) %>% map_dfr(function(k_min) {c(`Valore parametro k_min` = k_min, `Errore` = mean(cv.error(Class ~ ., tree, data, nrow(data), minsize = k_min)))}) %>% ggplot(aes(x=`Valore parametro k_min`, y=`Errore`)) + geom_line() + ylim(0, 1)
+cv.error.ST.kmin = c(2:50) %>% map_dfr(function(k_min) {c(`Valore parametro k_min` = k_min, `Errore` = mean(cv.error(Class ~ ., tree, data, nrow(data), minsize = k_min, mindev = 0)))}) %>% ggplot(aes(x=`Valore parametro k_min`, y=`Errore`)) + geom_line()
 cv.error.ST.kmin
 ```
 
 Optimal values for tree based methods
 ```{r}
-optimal.RF.B = which(oob.error.RF.B$data$Errore == min(oob.error.RF.B$data$Errore)) # already ordered, use index instead of value
+optimal.RF.B = which(oob.error.B[1:1000,]$Errore == min(oob.error.B[1:1000,]$Errore)) # already ordered, use index instead of value
 optimal.RF.m = which(oob.error.RF.m$data$Errore == min(oob.error.RF.m$data$Errore))
-optimal.TB.B = which(oob.error.TB.B$data$Errore == min(oob.error.TB.B$data$Errore))
-optimal.ST.kmin = which(cv.error.ST.kmin$data$Errore == min(cv.error.ST.kmin$data$Errore))
+optimal.TB.B = which(oob.error.B[1001:2000,]$Errore == min(oob.error.B[1001:2000,]$Errore))
+optimal.ST.kmin = which(cv.error.ST.kmin$data$Errore == min(cv.error.ST.kmin$data$Errore)) + 1
 optimal.RF.B.m = oob.error.B.m[which(oob.error.B.m$err == min(oob.error.B.m$err)),]
 ```
    
@@ -248,14 +256,13 @@ modelSVM = svm(Class ~ ., data)
 
 CV errors for multiple parameters (from lab4)
 ```{r}
-cv.error.SVM.C = expand_grid(kernel=c("linear","polynomial","radial","sigmoid"), `Valore parametro C`=exp(seq(-6,8,0.5))) %>% rowwise() %>% mutate(`Errore` = mean(cv.error(Class~., svm, data, 10, kernel=kernel, cost=`Valore parametro C`, degree=2)))
+cv.error.SVM.C = expand_grid(kernel=c("linear","polynomial","radial","sigmoid"), `Valore parametro C`=exp(seq(-10,10,0.5))) %>% rowwise() %>% mutate(`Errore` = mean(cv.error(Class~., svm, data, 10, kernel=kernel, cost=`Valore parametro C`, degree=2)))
 cv.error.SVM.C %>% ggplot(aes(x=`Valore parametro C`,y=`Errore`,color=kernel)) + scale_x_log10() + geom_line() + geom_point()
-cv.error.SVM.C
 ```
 
 Optimal values for SVM
 ```{r}
-optimal.SVM.C = exp(-6 + (which(cv.error.SVM.C$Errore == min(cv.error.SVM.C$Errore)) - 1) * 0.5) # index times forward in sequence seq(-6,8,0.5)
+optimal.SVM.C = cv.error.SVM.C[which(cv.error.SVM.C$Errore == min(cv.error.SVM.C$Errore)),2]
 optimal.SVM.kernel.table = cv.error.SVM.C[which(cv.error.SVM.C$Errore == min(cv.error.SVM.C$Errore)),1]
 optimal.SVM.kernel = string(optimal.SVM.kernel.table$kernel)
 ```
@@ -264,22 +271,27 @@ LOOCV errors with detected optimal values
 
 LOOCV tree
 ```{r}
-mean(cv.error(Class ~ ., tree, data, nrow(data), minsize = optimal.ST.kmin))
+mean(cv.error(Class ~ ., tree, data, nrow(data), minsize = optimal.ST.kmin, mindev = 0))
+mean(cv.error(Class ~ ., tree, data, nrow(data), mindev = 0))
 ```
 
 LOOCV tree bagging
 ```{r}
-mean(cv.error(Class ~ ., randomForest, data, nrow(data), mtry = ncol(data) - 1, ntree = optimal.TB.B)) # or could leave default
+mean(cv.error(Class ~ ., randomForest, data, nrow(data), mtry = ncol(data) - 1, ntree = 502))
+mean(cv.error(Class ~ ., randomForest, data, nrow(data), mtry = ncol(data) - 1, ntree = 500)) # or could leave default
 ```
 
 LOOCV RandomForest
 ```{r}
-mean(cv.error(Class ~ ., randomForest, data, nrow(data), ntree = optimal.RF.B, mtry = optimal.RF.m))
+mean(cv.error(Class ~ ., randomForest, data, nrow(data), mtry = 10, ntree = 92))
+mean(cv.error(Class ~ ., randomForest, data, nrow(data), mtry = 4, ntree = optimal.RF.B))
+mean(cv.error(Class ~ ., randomForest, data, nrow(data), ntree = 500, mtry = 3))
 ```
 
 LOOCV SVM
 ```{r}
-mean(cv.error(Class ~ ., svm, data, nrow(data), kernel = optimal.SVM.kernel, cost = optimal.SVM.C))
+mean(cv.error(Class ~ ., svm, data, nrow(data), kernel = "linear", cost = 1))
+mean(cv.error(Class ~ ., svm, data, nrow(data), kernel = "linear", cost = optimal.SVM.C$`Valore parametro C`))
 ```
 
 LOOCV Naive Bayes 
@@ -306,67 +318,65 @@ kNN classification
 
 Normalize data
 ```{r}
-norm.data = c(1:nrow(data)) %>% map_dfr(function(r) {
-  data[r, -c(1, 2)]/max(data[r, -c(1, 2)])
-})
-classes = data$Class # true classifications of training set
+# norm.data = c(1:nrow(data)) %>% map_dfr(function(r) {
+#   data[r, -c(1, 2)]/max(data[r, -c(1, 2)])
+# })
+# classes = data$Class # true classifications of training set
 ```
 
 
 ```{r}
-cv.error.knn = c(1:200) %>% map_dfr(function(k) {
-  c(`Valore parametro k` = k, Errore = length(which(classes != knn.cv(norm.data, classes, k = k)))/(length(classes)))
-}) %>% ggplot(aes(x = `Valore parametro k`, y = Errore)) + geom_line()
-cv.error.knn
-
-index.test = sample(1:nrow(norm.data), size = 1)
-test = norm.data[index.test,]
-train = norm.data[-index.test,]
-classes.train = data[-index.test, 1]
-
-knn(train, test, classes.train, k = 3)
+# cv.error.knn = c(1:200) %>% map_dfr(function(k) {
+#   c(`Valore parametro k` = k, Errore = length(which(classes != knn.cv(norm.data, classes, k = k)))/(length(classes)))
+# }) %>% ggplot(aes(x = `Valore parametro k`, y = Errore)) + geom_line()
+# cv.error.knn
+# 
+# index.test = sample(1:nrow(norm.data), size = 1)
+# test = norm.data[index.test,]
+# train = norm.data[-index.test,]
+# classes.train = data[-index.test, 1]
+# 
+# knn(train, test, classes.train, k = 3)
 ```
 
 
 ```{r}
-for (i in c(1:nrow(norm.data))) {
-  test.index = sample(1:nrow(norm.data))
-  test = norm.data[test.index,]
-  train = norm.data[-test.index,]
-  classes.train = data[-test.index,1]
-  
-  knn(train, test, classes.train)
-}
+# for (i in c(1:nrow(norm.data))) {
+#   test.index = sample(1:nrow(norm.data))
+#   test = norm.data[test.index,]
+#   train = norm.data[-test.index,]
+#   classes.train = data[-test.index,1]
+#   
+#   knn(train, test, classes.train)
+#}
 ```
 
 Alternative error evaluation (similar results to graph above)
 ```{r}
-prova.norm.data = norm.data %>% mutate(data$Class)
-
-trControl <- trainControl(method  = "cv",
-                          number  = 10)
-fit <- train(`data$Class` ~ .,
-             method     = "knn",
-             tuneGrid   = expand.grid(k = 1:200),
-             trControl  = trControl,
-             metric     = "Accuracy",
-             data       = prova.norm.data)
+# prova.norm.data = norm.data %>% mutate(data$Class)
+# 
+# trControl <- trainControl(method  = "cv",
+#                           number  = 10)
+# fit <- train(`data$Class` ~ .,
+#              method     = "knn",
+#              tuneGrid   = expand.grid(k = 1:200),
+#              trControl  = trControl,
+#              metric     = "Accuracy",
+#              data       = prova.norm.data)
 ```
 
 
 ```{r}
-
-
-indexes = sample(nrow(data))
-  errs = c(1:nrow(data)) %>% map_dbl(function(i) {
-    indexes.test = indexes[c((nrow(data)/nrow(data)*(i-1)+1):(nrow(data)/nrow(data)*i))] # 1 -> n/k, (n/k) + 1 -> 2*(n/k), ...
-    m = knn(data[-indexes.test,],indexes.test, data[indexes.test,"SpecimenNumber"], k=13)
-    predicted.y = predict(m, data[indexes.test,], type = "class")
-    actual.y = data[indexes.test, as.character(f_lhs(Class ~ .))]
-    confusion.matrix = table(actual.y, predicted.y)
-    1-sum(diag(confusion.matrix))/sum(confusion.matrix)
-  })
-  names(errs) = paste0("fold", c(1:nrow(data)))
-  errs
-
+# indexes = sample(nrow(data))
+#   errs = c(1:nrow(data)) %>% map_dbl(function(i) {
+#     indexes.test = indexes[c((nrow(data)/nrow(data)*(i-1)+1):(nrow(data)/nrow(data)*i))] # 1 -> n/k, (n/k) + 1 -> 2*(n/k), ...
+#     m = knn(data[-indexes.test,],indexes.test, data[indexes.test,"SpecimenNumber"], k=13)
+#     predicted.y = predict(m, data[indexes.test,], type = "class")
+#     actual.y = data[indexes.test, as.character(f_lhs(Class ~ .))]
+#     confusion.matrix = table(actual.y, predicted.y)
+#     1-sum(diag(confusion.matrix))/sum(confusion.matrix)
+#   })
+#   names(errs) = paste0("fold", c(1:nrow(data)))
+#   errs
+```
 

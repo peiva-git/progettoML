@@ -1,0 +1,238 @@
+```{r}
+require(tidyverse)
+require(rlang)
+require(randomForest)
+require(tree)
+require(e1071)
+require(BBmisc)
+```
+
+```{r}
+# return vector of errors for each fold
+# can specify formula, learning technique, data and number of folds (k)
+cv.error = function(formula, learner, data, k, ...) {
+  indexes = sample(nrow(data))
+  errs = c(1:k) %>% map_dbl(function(i) {
+    indexes.test = indexes[c((nrow(data)/k*(i-1)+1):(nrow(data)/k*i))] # 1 -> n/k, (n/k) + 1 -> 2*(n/k), ...
+    m = learner(formula, data[-indexes.test,], ...)
+    predicted.y = predict(m, data[indexes.test,], type = "class")
+    actual.y = data[indexes.test, as.character(f_lhs(formula))]
+    confusion.matrix = table(actual.y, predicted.y)
+    1-sum(diag(confusion.matrix))/sum(confusion.matrix)
+  })
+  names(errs) = paste0("fold", c(1:k))
+  errs
+}
+```
+
+User defined functions
+```{r}
+oob.error.RF = function(formula, data, ...) {
+  model.RF = randomForest(formula, data, ...)
+  confusion.matrix.RF = model.RF$confusion[,-ncol(model.RF$confusion)]
+  1-sum(diag(confusion.matrix.RF))/sum(confusion.matrix.RF)
+}
+
+oob.error.TB = function(formula, data, ...) {
+  model.TB = randomForest(formula, data, mtry = ncol(data) - 1, ...)
+  confusion.matrix.TB = model.TB$confusion[,-ncol(model.TB$confusion)]
+  1 - sum(diag(confusion.matrix.TB))/sum(confusion.matrix.TB)
+}
+```
+
+First we import the csv
+```{r}
+#data = read.csv("C:\\Users\\aleks\\Documents\\drive\\uni\\Progetti\\ML\\progetti 2019_20\\leaf\\leaf.csv")
+#data = read.csv("/home/peiva/Documents/Sync documents/units/introduction to machine learning and evolutionary robotics/progetti_2019_20/leaf identification/leaf.csv")
+data = read.csv("/home/peiva/Documents/Sync documents/Ivan/units/introduction to machine learning and evolutionary robotics/progetti_2019_20/leaf identification/leaf.csv")
+```
+
+Change column names
+```{r}
+colnames(data) <- c("Class","SpecimenNumber","Eccentricity","AspectRatio","Elongation",
+                    "Solidity","StochasticConvexity","IsoperimetricFactor",
+                    "MaximalIndentationDepth","Lobedness","AverageIntensity" , 
+                    "AverageContrast","Smoothness","ThirdMoment","Uniformity","Entropy")
+# remove specimen count column
+ data = data[,-2]
+# SpecimenCount value reduces OOB error on RF by 3%, keep it
+```
+
+Treat Class column as categories
+```{r}
+data$Class = as.factor(data$Class) # otherwise randomForest assumes regression
+# mapvalues(data$Class, from = c(...), to = c(...)) to rename factor column names
+```
+
+ST internal CV
+```{r}
+internalCV.ST = function(formula, data, k) {
+ cv.error.ST.kmin = c(2:20) %>% map_dfr(function(k_min) {c(`Valore parametro k_min` = k_min, `Errore` = mean(cv.error(formula, tree, data, k, minsize = k_min, mindev = 0)))})
+ # best k_min
+ k_min = which.first(cv.error.ST.kmin$Errore == min(cv.error.ST.kmin$Errore)) + 1
+}
+```
+
+Decision tree without parameters evaluation
+```{r}
+cv.error.external.ST = function(formula, data, k) {
+  indexes = sample(nrow(data))
+  
+  errs = c(1:k) %>% map_dbl(function(i) {
+    indexes.test = indexes[c((nrow(data)/k*(i-1)+1):(nrow(data)/k*i))] # 1 -> n/k, (n/k) + 1 -> 2*(n/k), ...
+    
+    # first compute k_min with 10-CV on left out slices
+    k_min = internalCV.ST(formula, data[-indexes.test,], 10)
+    
+    m = tree(formula, data[-indexes.test,], minsize = k_min, mindev = 0)
+    predicted.y = predict(m, data[indexes.test,], type = "class")
+    actual.y = data[indexes.test, as.character(f_lhs(formula))]
+    confusion.matrix = table(actual.y, predicted.y)
+    1-sum(diag(confusion.matrix))/sum(confusion.matrix)
+  })
+  names(errs) = paste0("fold", c(1:k))
+  mean(errs)
+}
+```
+
+Error with ST model
+```{r}
+error.ST = cv.error.external.ST(Class ~ ., data, nrow(data))
+```
+
+TB internal CV
+```{r}
+internalCV.TB = function(formula, data, k) {
+ cv.error.TB.B = c(1:1000) %>% map_dfr(function(b) {c(`Valore parametro B` = b, `Errore` = mean(cv.error(formula, randomForest, data, k, ntree = b, mtry = ncol(data) - 1)))})
+ # best B
+ B = which.first(cv.error.TB.B$Errore == min(cv.error.TB.B$Errore))
+}
+```
+
+TB internal OOB
+```{r}
+internalOOB.TB = function(formula, data) {
+ cv.error.TB.B = c(1:1000) %>% map_dfr(function(b) {
+   c(`Valore parametro B` = b, `Errore` = oob.error.TB(formula, data, ntree = b))})
+ # best B
+ B = which.first(cv.error.TB.B$Errore == min(cv.error.TB.B$Errore))
+}
+```
+
+Tree bagging without parameters evaluation
+```{r}
+cv.error.external.TB = function(formula, data, k) {
+  indexes = sample(nrow(data))
+  
+  errs = c(1:k) %>% map_dbl(function(i) {
+    indexes.test = indexes[c((nrow(data)/k*(i-1)+1):(nrow(data)/k*i))] # 1 -> n/k, (n/k) + 1 -> 2*(n/k), ...
+    
+    # first compute k_min with 10-CV on left out slices
+    # B = internalCV.TB(formula, data[-indexes.test,], 10)
+    
+    # or use OOB
+    B = internalOOB.TB(formula, data[-indexes.test,])
+    
+    m = randomForest(formula, data[-indexes.test,], mtry = ncol(data) - 1, ntree = B)
+    predicted.y = predict(m, data[indexes.test,], type = "class")
+    actual.y = data[indexes.test, as.character(f_lhs(formula))]
+    confusion.matrix = table(actual.y, predicted.y)
+    1-sum(diag(confusion.matrix))/sum(confusion.matrix)
+  })
+  names(errs) = paste0("fold", c(1:k))
+  mean(errs)
+}
+```
+
+Error with TB model
+```{r}
+error.TB = cv.error.external.TB(Class ~ ., data, nrow(data))
+```
+
+RF internal OOB
+```{r}
+internalOOB.RF = function(formula, data) {
+  cv.error.RF.B.m = c(1:1000) %>% map_dfr(function(b) {
+    c(1:15) %>% mapd_dfr(function(m) {
+     c(`Valore parametro B` = b, `Valore parametro m` = m, `Errore` = oob.error.RF(formula, data, ntree = b, mtry = m))
+   })
+  })
+ # best B
+ index = which.first(cv.error.RF.B.m$Errore == min(cv.error.RF.B.m$Errore))
+ c(B = cv.error.RF.B.m$`Valore parametro B`[index], m = cv.error.RF.B.m$`Valore parametro m`[index])
+}
+```
+
+Random Forest without parameters evaluation
+```{r}
+cv.error.external.RF = function(formula, data, k) {
+  indexes = sample(nrow(data))
+  
+  errs = c(1:k) %>% map_dbl(function(i) {
+    indexes.test = indexes[c((nrow(data)/k*(i-1)+1):(nrow(data)/k*i))] # 1 -> n/k, (n/k) + 1 -> 2*(n/k), ...
+    
+    # first compute k_min with 10-CV on left out slices
+    # B = internalCV.TB(formula, data[-indexes.test,], 10)
+    
+    # or use OOB
+    values = internalOOB.RF(formula, data[-indexes.test,])
+    B = values$B
+    m = values$m
+    
+    model = randomForest(formula, data[-indexes.test,], mtry = m, ntree = B)
+    predicted.y = predict(model, data[indexes.test,], type = "class")
+    actual.y = data[indexes.test, as.character(f_lhs(formula))]
+    confusion.matrix = table(actual.y, predicted.y)
+    1-sum(diag(confusion.matrix))/sum(confusion.matrix)
+  })
+  names(errs) = paste0("fold", c(1:k))
+  mean(errs)
+}
+```
+
+Error with RF model
+```{r}
+error.RF = cv.error.external.RF(Class ~ ., data, nrow(data))
+```
+
+SVM internal CV
+```{r}
+internalCV.SVM = function(formula, data, k) {
+  cv.error.SVM.C.kernel = seq(exp(-10), exp(10), 0.5) %>% map_dfr(function(c) {
+    c("linear", "polynomial", "radial", "sigmoid") %>% mapd_dfr(function(ker) {
+     c(`Valore parametro C` = c, `Kernel` = ker, `Errore` = mean(cv.error(formula, svm, data, k, kernel = ker, cost = c)))
+   })
+  })
+ # best B
+ index = which.first(cv.error.SVM.C.kernel$Errore == min(cv.error.SVM.C.kernel$Errore))
+ c(C = cv.error.SVM.C.kernel$`Valore parametro C`[index], kernel = cv.error.SVM.C.kernel$`Kernel`[index])
+}
+```
+
+SVM without parameters evaluation
+```{r}
+cv.error.external.SVM = function(formula, data, k) {
+  indexes = sample(nrow(data))
+  
+  errs = c(1:k) %>% map_dbl(function(i) {
+    indexes.test = indexes[c((nrow(data)/k*(i-1)+1):(nrow(data)/k*i))] # 1 -> n/k, (n/k) + 1 -> 2*(n/k), ...
+    
+    values = internalCV.SVM(formula, data[-indexes.test,], 10)
+    C = values$C
+    kernel = values$kernel
+    
+    model = svm(formula, data[-indexes.test,], cost = C, kernel = kernel)
+    predicted.y = predict(model, data[indexes.test,], type = "class")
+    actual.y = data[indexes.test, as.character(f_lhs(formula))]
+    confusion.matrix = table(actual.y, predicted.y)
+    1-sum(diag(confusion.matrix))/sum(confusion.matrix)
+  })
+  names(errs) = paste0("fold", c(1:k))
+  mean(errs)
+}
+```
+
+Error with SVM model
+```{r}
+error.SVM = cv.error.external.SVM(Class ~ ., data, nrow(data))
+```
