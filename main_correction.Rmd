@@ -97,7 +97,7 @@ cv.error.external.ST = function(formula, data, k) {
 
 Error with ST model
 ```{r}
-error.ST = cv.error.external.ST(Class ~ ., data, nrow(data))
+error.ST = cv.error.external.ST(Class ~ ., data, 10)
 ```
 
 TB internal CV
@@ -146,14 +146,14 @@ cv.error.external.TB = function(formula, data, k) {
 
 Error with TB model
 ```{r}
-error.TB = cv.error.external.TB(Class ~ ., data, nrow(data))
+error.TB = cv.error.external.TB(Class ~ ., data, 10)
 ```
 
 RF internal OOB
 ```{r}
 internalOOB.RF = function(formula, data) {
-  cv.error.RF.B.m = c(1:1000) %>% map_dfr(function(b) {
-    c(1:15) %>% mapd_dfr(function(m) {
+  cv.error.RF.B.m = c(1:700) %>% map_dfr(function(b) {
+    c(2:10) %>% map_dfr(function(m) {
      c(`Valore parametro B` = b, `Valore parametro m` = m, `Errore` = oob.error.RF(formula, data, ntree = b, mtry = m))
    })
   })
@@ -176,8 +176,8 @@ cv.error.external.RF = function(formula, data, k) {
     
     # or use OOB
     values = internalOOB.RF(formula, data[-indexes.test,])
-    B = values$B
-    m = values$m
+    B = values[1]
+    m = values[2]
     
     model = randomForest(formula, data[-indexes.test,], mtry = m, ntree = B)
     predicted.y = predict(model, data[indexes.test,], type = "class")
@@ -192,18 +192,16 @@ cv.error.external.RF = function(formula, data, k) {
 
 Error with RF model
 ```{r}
-error.RF = cv.error.external.RF(Class ~ ., data, nrow(data))
+error.RF = cv.error.external.RF(Class ~ ., data, 10)
 ```
 
 SVM internal CV
 ```{r}
 internalCV.SVM = function(formula, data, k) {
   cv.error.SVM.C.kernel = seq(exp(-10), exp(10), 0.5) %>% map_dfr(function(c) {
-    c("linear", "polynomial", "radial", "sigmoid") %>% mapd_dfr(function(ker) {
-     c(`Valore parametro C` = c, `Kernel` = ker, `Errore` = mean(cv.error(formula, svm, data, k, kernel = ker, cost = c)))
-   })
+    c(`Valore parametro C` = c, `Kernel` = "linear", `Errore` = mean(cv.error(formula, svm, data, k, kernel = "linear", cost = c)))
   })
- # best B
+ # best index
  index = which.first(cv.error.SVM.C.kernel$Errore == min(cv.error.SVM.C.kernel$Errore))
  c(C = cv.error.SVM.C.kernel$`Valore parametro C`[index], kernel = cv.error.SVM.C.kernel$`Kernel`[index])
 }
@@ -218,8 +216,8 @@ cv.error.external.SVM = function(formula, data, k) {
     indexes.test = indexes[c((nrow(data)/k*(i-1)+1):(nrow(data)/k*i))] # 1 -> n/k, (n/k) + 1 -> 2*(n/k), ...
     
     values = internalCV.SVM(formula, data[-indexes.test,], 10)
-    C = values$C
-    kernel = values$kernel
+    C = values[1]
+    kernel = values[2]
     
     model = svm(formula, data[-indexes.test,], cost = C, kernel = kernel)
     predicted.y = predict(model, data[indexes.test,], type = "class")
@@ -234,5 +232,5 @@ cv.error.external.SVM = function(formula, data, k) {
 
 Error with SVM model
 ```{r}
-error.SVM = cv.error.external.SVM(Class ~ ., data, nrow(data))
+error.SVM = cv.error.external.SVM(Class ~ ., data, 10)
 ```
