@@ -42,9 +42,9 @@ oob.error.TB = function(formula, data, ...) {
 
 First we import the csv
 ```{r}
-#data = read.csv("C:\\Users\\aleks\\Documents\\drive\\uni\\Progetti\\ML\\progetti 2019_20\\leaf\\leaf.csv")
+data = read.csv("C:\\Users\\aleks\\Documents\\drive\\uni\\Progetti\\ML\\progetti 2019_20\\leaf\\leaf.csv")
 #data = read.csv("/home/peiva/Documents/Sync documents/units/introduction to machine learning and evolutionary robotics/progetti_2019_20/leaf identification/leaf.csv")
-data = read.csv("/home/peiva/Documents/Sync documents/Ivan/units/introduction to machine learning and evolutionary robotics/progetti_2019_20/leaf identification/leaf.csv")
+#data = read.csv("/home/peiva/Documents/Sync documents/Ivan/units/introduction to machine learning and evolutionary robotics/progetti_2019_20/leaf identification/leaf.csv")
 ```
 
 Change column names
@@ -64,6 +64,8 @@ data$Class = as.factor(data$Class) # otherwise randomForest assumes regression
 # mapvalues(data$Class, from = c(...), to = c(...)) to rename factor column names
 ```
 
+1) DECISION TREE 
+
 ST internal CV
 ```{r}
 internalCV.ST = function(formula, data, k) {
@@ -73,7 +75,7 @@ internalCV.ST = function(formula, data, k) {
 }
 ```
 
-Decision tree without parameters evaluation
+Decision tree without parameters evaluation (Neast CV)
 ```{r}
 cv.error.external.ST = function(formula, data, k) {
   indexes = sample(nrow(data))
@@ -98,9 +100,12 @@ cv.error.external.ST = function(formula, data, k) {
 Error with ST model
 ```{r}
 error.ST = cv.error.external.ST(Class ~ ., data, 10)
+error.ST
 ```
 
-TB internal CV
+2) TREE BAGGING AND RANDOM FOREST
+
+TB internal CV (not used)
 ```{r}
 internalCV.TB = function(formula, data, k) {
  cv.error.TB.B = c(1:1000) %>% map_dfr(function(b) {c(`Valore parametro B` = b, `Errore` = mean(cv.error(formula, randomForest, data, k, ntree = b, mtry = ncol(data) - 1)))})
@@ -109,7 +114,7 @@ internalCV.TB = function(formula, data, k) {
 }
 ```
 
-TB internal OOB
+TB internal OOB (we are gonna use this => computational better)
 ```{r}
 internalOOB.TB = function(formula, data) {
  cv.error.TB.B = c(1:1000) %>% map_dfr(function(b) {
@@ -119,7 +124,7 @@ internalOOB.TB = function(formula, data) {
 }
 ```
 
-Tree bagging without parameters evaluation
+Tree bagging without parameters evaluation (Neast CV)
 ```{r}
 cv.error.external.TB = function(formula, data, k) {
   indexes = sample(nrow(data))
@@ -147,6 +152,7 @@ cv.error.external.TB = function(formula, data, k) {
 Error with TB model
 ```{r}
 error.TB = cv.error.external.TB(Class ~ ., data, 10)
+error.TB
 ```
 
 RF internal OOB
@@ -163,7 +169,7 @@ internalOOB.RF = function(formula, data) {
 }
 ```
 
-Random Forest without parameters evaluation
+Random Forest without parameters evaluation (NeasT CV) 
 ```{r}
 cv.error.external.RF = function(formula, data, k) {
   indexes = sample(nrow(data))
@@ -193,13 +199,18 @@ cv.error.external.RF = function(formula, data, k) {
 Error with RF model
 ```{r}
 error.RF = cv.error.external.RF(Class ~ ., data, 10)
+error.RF
 ```
 
-SVM internal CV
+3) SUPPORT VECTOR MACHINES
+
+SVM internal CV (we must add the evaluation of different type of kernels)
 ```{r}
 internalCV.SVM = function(formula, data, k) {
-  cv.error.SVM.C.kernel = seq(exp(-10), exp(10), 0.5) %>% map_dfr(function(c) {
-    c(`Valore parametro C` = c, `Kernel` = "linear", `Errore` = mean(cv.error(formula, svm, data, k, kernel = "linear", cost = c)))
+  cv.error.SVM.C.kernel = seq(exp(-10), exp(10), 0.5) %>% map_dfr(function(c) { 
+    c("linear" , "polynomial" , "radial" , "sigmoid") %>% map_dfr(function(ker){
+      c(`Valore parametro C` = c, `Kernel` = ker, `Errore` = mean(cv.error(formula, svm, data, k, kernel = ker, cost = c)))
+    })
   })
  # best index
  index = which.first(cv.error.SVM.C.kernel$Errore == min(cv.error.SVM.C.kernel$Errore))
@@ -233,4 +244,91 @@ cv.error.external.SVM = function(formula, data, k) {
 Error with SVM model
 ```{r}
 error.SVM = cv.error.external.SVM(Class ~ ., data, 10)
+error.SVM
 ```
+
+4) NAIVE BAYES
+
+10-CV Naive Bayes 
+```{r}
+error.NB = mean(cv.error(Class ~ ., naiveBayes, data, 10))
+error.NB                
+```
+
+
+5) RANDOM CLASSIFIER
+
+Model RC
+```{r}
+error = 0
+  for(i in c(1:nrow(data))) {
+    x = sample(data[,1] , size =1)
+    if(x!=data[i,1]) {
+      error = error + 1;
+    }  
+  }
+error.rate.RC = error/nrow(data);
+error.rate.RC
+```
+
+10-CV Random Classifier
+```{r}
+# return vector of errors for each fold
+# can specify formula, learning technique, data and number of folds (k)
+cv.error = function(formula, learner, data, k, ...) {
+  indexes = sample(nrow(data))
+  errs = c(1:k) %>% map_dbl(function(i) {
+    indexes.test = indexes[c((nrow(data)/k*(i-1)+1):(nrow(data)/k*i))] # 1 -> n/k, (n/k) + 1 -> 2*(n/k), ...
+    m = learner(formula, data[-indexes.test,], ...)
+    predicted.y = predict(m, data[indexes.test,], type = "class")
+    actual.y = data[indexes.test, as.character(f_lhs(formula))]
+    confusion.matrix = table(actual.y, predicted.y)
+    1-sum(diag(confusion.matrix))/sum(confusion.matrix)
+  })
+  names(errs) = paste0("fold", c(1:k))
+  errs
+}
+```
+
+
+MODELS ERRORS WITH DEFAULT PARAMETERS (10-CV)
+
+- DECISION TREE
+```{r}
+error.ST.default = mean(cv.error(Class ~ ., tree, data, 10))
+error.NB                
+```
+- TREE BAGGING
+```{r}
+error.TB.default = mean(cv.error(Class ~ ., randomForest, data, mtry = ncol(data) - 1, 10))
+error.NB                
+```
+- RANDOM FOREST
+```{r}
+error.RF.default = mean(cv.error(Class ~ ., randomForest, data, 10))
+error.NB                
+```
+- SVM
+```{r}
+error.SVM.default = mean(cv.error(Class ~ ., svm, data, 10))
+error.NB                
+```
+- NAIVE BAYES
+```{r}
+error.NB.default = mean(cv.error(Class ~ ., naiveBayes, data, 10))
+error.NB                
+```
+- RANDOM CLASSIFIER
+```{r}
+error.RC.default = mean(cv.error(Class ~ ., naiveBayes, data, 10))
+error.NB                
+```
+
+
+
+
+
+
+
+
+
