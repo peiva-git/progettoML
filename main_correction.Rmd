@@ -75,7 +75,7 @@ internalCV.ST = function(formula, data, k) {
 }
 ```
 
-Decision tree without parameters evaluation (Neast CV)
+Decision tree without parameters evaluation (Nested CV)
 ```{r}
 cv.error.external.ST = function(formula, data, k) {
   indexes = sample(nrow(data))
@@ -124,7 +124,7 @@ internalOOB.TB = function(formula, data) {
 }
 ```
 
-Tree bagging without parameters evaluation (Neast CV)
+Tree bagging without parameters evaluation (Nested CV)
 ```{r}
 cv.error.external.TB = function(formula, data, k) {
   indexes = sample(nrow(data))
@@ -169,7 +169,7 @@ internalOOB.RF = function(formula, data) {
 }
 ```
 
-Random Forest without parameters evaluation (NeasT CV) 
+Random Forest without parameters evaluation (Nested CV) 
 ```{r}
 cv.error.external.RF = function(formula, data, k) {
   indexes = sample(nrow(data))
@@ -202,17 +202,17 @@ error.RF = cv.error.external.RF(Class ~ ., data, 10)
 error.RF
 ```
 
-
+  
 3) SUPPORT VECTOR MACHINES
 
 SVM internal CV (we must add the evaluation of different type of kernels)
 ```{r}
 internalCV.SVM = function(formula, data, k) {
-  cv.error.SVM.C.kernel = seq(exp(-10), exp(10), 0.5) %>% map_dfr(function(c) { 
-    c("linear" , "polynomial" , "radial" , "sigmoid") %>% map_dfr(function(ker){
+  cv.error.SVM.C.kernel = seq(exp(-5), exp(5), 0.5) %>% map_dfr(function(c) { 
+  c("linear" , "polynomial" , "radial" , "sigmoid") %>% map_dfr(function(ker){
       c(`Valore parametro C` = c, `Kernel` = ker, `Errore` = mean(cv.error(formula, svm, data, k, kernel = ker, cost = c)))
     })
-  })
+})
  # best index
  index = which.first(cv.error.SVM.C.kernel$Errore == min(cv.error.SVM.C.kernel$Errore))
  c(C = cv.error.SVM.C.kernel$`Valore parametro C`[index], kernel = cv.error.SVM.C.kernel$`Kernel`[index])
@@ -249,7 +249,7 @@ error.SVM
 
 4) RANDOM CLASSIFIER
 
-Model RC
+Prediction error RC
 ```{r}
 
 error.RC = function(dataset){  
@@ -274,16 +274,11 @@ cv.error.RC = function(data, k) {
   indexes = sample(nrow(data))
   errs = c(1:k) %>% map_dbl(function(i) {
     indexes.test = indexes[c((nrow(data)/k*(i-1)+1):(nrow(data)/k*i))] # 1 -> n/k, (n/k) + 1 -> 2*(n/k), ...
-    err = error.RC(data[-indexes.test,])
+    error.RC(data[-indexes.test,])
   })
   mean(errs)
 }
 ```
-
-
-
-
-
 
 
 MODELS ERRORS WITH DEFAULT PARAMETERS (10-CV)
@@ -316,8 +311,8 @@ error.NB.default
 
 - RANDOM CLASSIFIER
 ```{r}
-error = cv.error.RC(data, 10)
-error             
+error.RC.default = cv.error.RC(data, 10)
+error.RC.default             
 ```
 
 
