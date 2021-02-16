@@ -202,6 +202,7 @@ error.RF = cv.error.external.RF(Class ~ ., data, 10)
 error.RF
 ```
 
+
 3) SUPPORT VECTOR MACHINES
 
 SVM internal CV (we must add the evaluation of different type of kernels)
@@ -225,7 +226,6 @@ cv.error.external.SVM = function(formula, data, k) {
   
   errs = c(1:k) %>% map_dbl(function(i) {
     indexes.test = indexes[c((nrow(data)/k*(i-1)+1):(nrow(data)/k*i))] # 1 -> n/k, (n/k) + 1 -> 2*(n/k), ...
-    
     values = internalCV.SVM(formula, data[-indexes.test,], 10)
     C = values[1]
     kernel = values[2]
@@ -260,15 +260,18 @@ error.NB
 
 Model RC
 ```{r}
-error = 0
-  for(i in c(1:nrow(data))) {
-    x = sample(data[,1] , size =1)
-    if(x!=data[i,1]) {
-      error = error + 1;
-    }  
+species = data[!duplicated(data$Class),1]
+error.RC = function(indexes){  
+  for(i in c(1:nrow(indexes))) {
+      x = sample(species , size =1)
+      if(x!=data[i,1]) {
+        error = error + 1;
+      }  
   }
-error.rate.RC = error/nrow(data);
-error.rate.RC
+  error.rate.RC = error/nrow(data);
+  error.rate.RC
+}  
+
 ```
 
 10-CV Random Classifier
@@ -296,32 +299,32 @@ MODELS ERRORS WITH DEFAULT PARAMETERS (10-CV)
 - DECISION TREE
 ```{r}
 error.ST.default = mean(cv.error(Class ~ ., tree, data, 10))
-error.NB                
+error.ST.default              
 ```
 - TREE BAGGING
 ```{r}
 error.TB.default = mean(cv.error(Class ~ ., randomForest, data, mtry = ncol(data) - 1, 10))
-error.NB                
+error.TB.default               
 ```
 - RANDOM FOREST
 ```{r}
 error.RF.default = mean(cv.error(Class ~ ., randomForest, data, 10))
-error.NB                
+error.RF.default               
 ```
 - SVM
 ```{r}
 error.SVM.default = mean(cv.error(Class ~ ., svm, data, 10))
-error.NB                
+error.SVM.default               
 ```
 - NAIVE BAYES
 ```{r}
 error.NB.default = mean(cv.error(Class ~ ., naiveBayes, data, 10))
-error.NB                
+error.NB.default                
 ```
 - RANDOM CLASSIFIER
 ```{r}
 error.RC.default = mean(cv.error(Class ~ ., naiveBayes, data, 10))
-error.NB                
+error.RC.default               
 ```
 
 
