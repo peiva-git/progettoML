@@ -247,28 +247,20 @@ error.SVM = cv.error.external.SVM(Class ~ ., data, 10)
 error.SVM
 ```
 
-4) NAIVE BAYES
-
-10-CV Naive Bayes 
-```{r}
-error.NB = mean(cv.error(Class ~ ., naiveBayes, data, 10))
-error.NB                
-```
-
-
-5) RANDOM CLASSIFIER
+4) RANDOM CLASSIFIER
 
 Model RC
 ```{r}
-species = data[!duplicated(data$Class),1]
-error.RC = function(indexes){  
-  for(i in c(1:nrow(indexes))) {
+
+error.RC = function(dataset){  
+  species = data[!duplicated(data$Class),1]
+  for(i in c(1:nrow(dataset))) {
       x = sample(species , size =1)
       if(x!=data[i,1]) {
         error = error + 1;
       }  
   }
-  error.rate.RC = error/nrow(data);
+  error.rate.RC = error/nrow(dataset);
   error.rate.RC
 }  
 
@@ -278,20 +270,20 @@ error.RC = function(indexes){
 ```{r}
 # return vector of errors for each fold
 # can specify formula, learning technique, data and number of folds (k)
-cv.error = function(formula, learner, data, k, ...) {
+cv.error.RC = function(data, k) {
   indexes = sample(nrow(data))
   errs = c(1:k) %>% map_dbl(function(i) {
     indexes.test = indexes[c((nrow(data)/k*(i-1)+1):(nrow(data)/k*i))] # 1 -> n/k, (n/k) + 1 -> 2*(n/k), ...
-    m = learner(formula, data[-indexes.test,], ...)
-    predicted.y = predict(m, data[indexes.test,], type = "class")
-    actual.y = data[indexes.test, as.character(f_lhs(formula))]
-    confusion.matrix = table(actual.y, predicted.y)
-    1-sum(diag(confusion.matrix))/sum(confusion.matrix)
+    err = error.RC(data[-indexes.test,])
   })
-  names(errs) = paste0("fold", c(1:k))
-  errs
+  mean(errs)
 }
 ```
+
+
+
+
+
 
 
 MODELS ERRORS WITH DEFAULT PARAMETERS (10-CV)
@@ -321,16 +313,12 @@ error.SVM.default
 error.NB.default = mean(cv.error(Class ~ ., naiveBayes, data, 10))
 error.NB.default                
 ```
+
 - RANDOM CLASSIFIER
 ```{r}
-error.RC.default = mean(cv.error(Class ~ ., naiveBayes, data, 10))
-error.RC.default               
+error = cv.error.RC(data, 10)
+error             
 ```
-
-
-
-
-
 
 
 
