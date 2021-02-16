@@ -213,7 +213,6 @@ internalCV.SVM = function(formula, data, k) {
       c(`Valore parametro C` = c, `Kernel` = ker, `Errore` = mean(cv.error(formula, svm, data, k, kernel = ker, cost = c)))
     })
 })
- # best index
  index = which.first(cv.error.SVM.C.kernel$Errore == min(cv.error.SVM.C.kernel$Errore))
  c(C = cv.error.SVM.C.kernel$`Valore parametro C`[index], kernel = cv.error.SVM.C.kernel$`Kernel`[index])
 }
@@ -268,8 +267,6 @@ error.RC = function(dataset){
 
 10-CV Random Classifier
 ```{r}
-# return vector of errors for each fold
-# can specify formula, learning technique, data and number of folds (k)
 cv.error.RC = function(data, k) {
   indexes = sample(nrow(data))
   errs = c(1:k) %>% map_dbl(function(i) {
